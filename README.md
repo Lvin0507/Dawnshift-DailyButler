@@ -5,7 +5,7 @@ A Windows script that wakes up early, runs my daily game routines, and sends a s
 ## What it does
 - **Arknights: Endfield** via [MaaEnd](https://github.com/MaaXYZ/MaaEnd) - launches the game and runs all dailies
 - **Arknights** via [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights) (PC client mode) - stops MAA once its log reports completion
-- **Wuthering Waves** via ok-ww - weekly garden task on Mondays only
+- **Wuthering Waves** via [ok-ww](https://github.com/ok-oldking/ok-wuthering-waves) - weekly garden task on Mondays only
 - Builds a Telegram report: Endfield/WW are summarized by Gemini, Arknights is parsed directly from the MAA log
 - Gemini calls retry with backoff on 503 and fall back to a lighter model
 - Archives each run's MaaEnd log for 14 days

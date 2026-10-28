@@ -1,0 +1,12 @@
+# Secrets and local config
+.env
+
+# Runtime output
+logs/
+*.log
+__pycache__/
+
+# Personal exports / screenshots
+*.json
+*.png
+*.jpg

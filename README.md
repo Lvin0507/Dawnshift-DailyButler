@@ -8,7 +8,7 @@ Clears my game dailies before I wake up: a Windows script that runs three game-a
 |---|---|---|
 | Arknights: Endfield | [MaaEnd](https://github.com/MaaXYZ/MaaEnd) | Launches the game and runs all daily tasks |
 | Arknights (PC client) | [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | Recruitment, base shifts, credit store, rewards |
-| Wuthering Waves | ok-ww | [ok-ww](https://github.com/ok-oldking/ok-wuthering-waves) | Weekly garden task, Mondays only |
+| Wuthering Waves | [ok-ww](https://github.com/ok-oldking/ok-wuthering-waves) | Weekly garden task, Mondays only |
 
 After the games finish, it builds a report and sends it to Telegram:
 

@@ -273,6 +273,7 @@ def parse_endfield_log(text):
     runs, fails = {}, {}
     launch = None  # None = launch task not seen, False = invoked but never succeeded, True = ok
     deliveries = 0
+    delivery_activity = 0  # any sign that a delivery job was actually scanned or routed
     current = None
 
     for raw in text.splitlines():
@@ -303,6 +304,9 @@ def parse_endfield_log(text):
               and msg == "item quantity added from recognition"
               and rec.get("item_id") == "item_spaceship_credit"):
             deliveries += 1
+        if current == "SeizeDeliveryJobs" and rec.get("component") in (
+                "SeizeDeliveryJobs", "AutoDeliveryResolveDestinationAction"):
+            delivery_activity += 1
 
     lines = ["『🪐 终末地战报』"]
     if launch is None and not runs:
@@ -324,6 +328,9 @@ def parse_endfield_log(text):
         if key == "SeizeDeliveryJobs" and n_runs:
             if deliveries >= DELIVERY_TARGET and not n_fails:
                 status = f"✅成功({deliveries}/{DELIVERY_TARGET})"
+            elif deliveries == 0 and delivery_activity == 0 and not n_fails:
+                # Task ran but found nothing to pick up - usually already done today
+                status = "✅无可接委托（今日可能已送完）"
             elif not n_fails:
                 status = f"⚠️部分完成({deliveries}/{DELIVERY_TARGET})"
             else:

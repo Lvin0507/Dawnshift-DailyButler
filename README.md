@@ -92,6 +92,16 @@ Problems I hit while building this, and what fixed them:
 - **MAA never exits on its own.** In PC-client mode there is no "exit when done" option, so the script watches MAA's log for its completion message and closes it, reading only the part of the log written during this run.
 - **Secrets started out hard-coded.** Everything sensitive now lives in a git-ignored `.env`, and GitHub push protection blocks accidental key commits.
 
+## Built on
+
+Dawnshift only orchestrates these tools and reads their logs — all the actual game automation is their work:
+
+- [MaaEnd](https://github.com/MaaXYZ/MaaEnd) — Arknights: Endfield
+- [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) — Arknights
+- [ok-wuthering-waves](https://github.com/ok-oldking/ok-wuthering-waves) — Wuthering Waves
+
+This repo doesn't include or redistribute any of their code. Each project has its own license; please check them before use.
+
 ## Disclaimer
 
 For learning purposes only. Game automation may violate the games' terms of service — use at your own risk.

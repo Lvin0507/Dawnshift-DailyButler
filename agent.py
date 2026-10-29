@@ -444,7 +444,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"⚠️ 静音模式激活失败: {e}")
 
-    print("=== 6AM 游戏日常自动化脚本启动 ===")
+    print("=== Dawnshift 启动 (pagent) ===")
     
     if not check_switch(SWITCH_FILE):
         print("检测到总开关为 [OFF]。准备关机...")

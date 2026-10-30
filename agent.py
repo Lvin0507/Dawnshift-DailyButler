@@ -25,7 +25,6 @@ def require_env(name):
     return value
 
 # Switch files (create the file to turn that game OFF)
-SWITCH_FILE = require_env("SWITCH_FILE")
 WW_SWITCH_FILE = require_env("WW_SWITCH_FILE")
 ARK_SWITCH_FILE = require_env("ARK_SWITCH_FILE")
 
@@ -445,12 +444,6 @@ if __name__ == "__main__":
         print(f"⚠️ 静音模式激活失败: {e}")
 
     print("=== Dawnshift 启动 (pagent) ===")
-    
-    if not check_switch(SWITCH_FILE):
-        print("检测到总开关为 [OFF]。准备关机...")
-        time.sleep(5)
-        subprocess.run(["shutdown", "/s", "/t", "0"])
-        exit()
         
     print("检测到总开关为 [ON]。准备打工...")
     

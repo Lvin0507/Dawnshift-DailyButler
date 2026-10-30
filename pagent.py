@@ -1,7 +1,8 @@
 """
 pagent.py - Dawnshift, full-Python version (no LLM).
 
-Runs Arknights: Endfield (MaaEnd), Arknights (MAA, PC client) and Wuthering Waves (ok-ww),
+Runs Arknights: Endfield (MaaEnd), Arknights (MAA, PC client), Wuthering Waves (ok-ww)
+and Blue Archive JP (BAAS, PC client),
 parses each tool's log deterministically, sends a Telegram report, then shuts the PC down.
 
 Usage:
@@ -9,6 +10,7 @@ Usage:
     python pagent.py --no-shutdown       # full run, but keep the PC on afterwards
     python pagent.py --dry-run           # launch nothing; parse the current MaaEnd log and print the report
     python pagent.py --dry-run --endfield-log logs\\go-service_2026-10-29_0712.log
+    python pagent.py --only bluearchive  # run one game only; print the report, no Telegram, no shutdown
 """
 
 import argparse
@@ -22,8 +24,11 @@ import re
 import shutil
 import subprocess
 import time
+import winreg
+from ctypes import wintypes
 from pathlib import Path
 
+import psutil
 import requests
 from dotenv import load_dotenv
 
@@ -43,7 +48,6 @@ def require_env(name):
 
 
 # Switch files (create the file to turn that game OFF)
-SWITCH_FILE = require_env("SWITCH_FILE")
 WW_SWITCH_FILE = require_env("WW_SWITCH_FILE")
 ARK_SWITCH_FILE = require_env("ARK_SWITCH_FILE")
 
@@ -60,6 +64,33 @@ MAA_ARK_PATH = require_env("MAA_ARK_PATH")
 MAA_ARK_LOG = require_env("MAA_ARK_LOG")
 MAA_DONE_MARKERS = ["任务已全部完成"]
 ARK_GAME_EXE = "Arknights.exe"
+
+# Blue Archive JP (BAAS, PC client) - BAAS starts the game and exits by itself when done
+BA_SWITCH_FILE = require_env("BA_SWITCH_FILE")
+BAAS_DIR = require_env("BAAS_DIR")
+# The BAAS launcher; set BAAS_EXE in .env if yours has a different name
+BAAS_EXE = os.getenv("BAAS_EXE") or os.path.join(BAAS_DIR, "BlueArchiveAutoScript.exe")
+BA_GAME_EXE = "BlueArchive.exe"
+# The JP PC client has to be started from its launcher, which needs a click on スタート
+BA_LAUNCHER_PATH = require_env("BA_LAUNCHER_PATH")
+BA_LAUNCHER_EXE = os.path.basename(BA_LAUNCHER_PATH)
+# Where スタート sits in the launcher window, as a fraction of its client area.
+# Measure it with scripts/measure_click.py if the launcher layout ever changes.
+BA_START_BUTTON = (0.852, 0.859)
+BA_REG_KEY = r"Software\YostarJP\BlueArchive"
+
+# Unity stores screen settings as "<name>_h<hash>"; match on the prefix
+# What BAAS needs: a 1280x720 window
+UNITY_WINDOWED = {
+    "Screenmanager Fullscreen mode": 3,              # 3 = windowed
+    "Screenmanager Resolution Width": 1280,
+    "Screenmanager Resolution Height": 720,
+    "Screenmanager Resolution Window Width": 1280,
+    "Screenmanager Resolution Window Height": 720,
+    "Screenmanager Resolution Use Native": 0,
+    "Screenmanager Window Position X": 0,
+    "Screenmanager Window Position Y": 0,
+}
 
 # Telegram
 TG_BOT_TOKEN = require_env("TG_BOT_TOKEN")
@@ -168,6 +199,130 @@ def send_tg_msg(text):
     except requests.exceptions.RequestException as e:
         print(f"⚠️ Telegram 发送失败: {type(e).__name__}")
         return False
+
+
+def _find_unity_values(key, prefixes):
+    """Map each Unity screen-setting prefix to its actual value name in this key."""
+    found, i = {}, 0
+    while True:
+        try:
+            name = winreg.EnumValue(key, i)[0]
+        except OSError:
+            break
+        for prefix in prefixes:
+            # "_h" excludes look-alikes such as "Screenmanager Fullscreen mode Default_h..."
+            if name.startswith(prefix + "_h"):
+                found[prefix] = name
+        i += 1
+    return found
+
+
+def set_display(key_path, values):
+    """Write a fixed set of Unity screen settings (prefix -> value) into the game's registry key."""
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0,
+                        winreg.KEY_READ | winreg.KEY_WRITE) as key:
+        for prefix, name in _find_unity_values(key, values).items():
+            winreg.SetValueEx(key, name, 0, winreg.REG_DWORD, values[prefix])
+
+
+def baas_processes(baas_dir):
+    """Processes whose executable lives inside the BAAS folder (launcher, bundled pythonw, OCR server).
+    Matching on the path keeps us from touching our own python.exe or anyone else's pythonw.exe."""
+    root = os.path.normcase(os.path.abspath(baas_dir)) + os.sep
+    procs = []
+    for p in psutil.process_iter(["exe", "name"]):
+        exe = p.info.get("exe")
+        if exe and os.path.normcase(exe).startswith(root):
+            procs.append(p)
+    return procs
+
+
+def kill_processes(procs):
+    for p in procs:
+        try:
+            p.kill()
+        except psutil.Error:
+            pass
+
+
+user32 = ctypes.windll.user32
+
+
+def make_dpi_aware():
+    """Use real pixel coordinates even with 125%/150% display scaling (safe to call more than once)."""
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try:
+            user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+
+def process_running(exe_name):
+    """Exact process-name check (tasklist truncates long names, so use psutil instead)."""
+    exe_name = exe_name.lower()
+    return any((p.info.get("name") or "").lower() == exe_name for p in psutil.process_iter(["name"]))
+
+
+def main_window_of(exe_name):
+    """Return the largest visible top-level window owned by a process with this exe name, or None."""
+    pids = {p.pid for p in psutil.process_iter(["name"])
+            if (p.info.get("name") or "").lower() == exe_name.lower()}
+    best, best_area = None, 0
+    enum_proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+    def callback(hwnd, _):
+        nonlocal best, best_area
+        if user32.IsWindowVisible(hwnd):
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            if pid.value in pids:
+                rect = wintypes.RECT()
+                user32.GetClientRect(hwnd, ctypes.byref(rect))
+                area = rect.right * rect.bottom
+                if area > best_area:
+                    best, best_area = hwnd, area
+        return True
+
+    user32.EnumWindows(enum_proc(callback), 0)
+    return best
+
+
+def click_in_window(hwnd, fx, fy):
+    """Bring the window to the front and click with the real mouse at a fraction of its client area."""
+    user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+    user32.SetForegroundWindow(hwnd)
+    time.sleep(0.5)
+    rect = wintypes.RECT()
+    user32.GetClientRect(hwnd, ctypes.byref(rect))
+    point = wintypes.POINT(int(rect.right * fx), int(rect.bottom * fy))
+    user32.ClientToScreen(hwnd, ctypes.byref(point))
+    user32.SetCursorPos(point.x, point.y)
+    time.sleep(0.1)
+    user32.mouse_event(0x0002, 0, 0, 0, 0)  # left down
+    time.sleep(0.05)
+    user32.mouse_event(0x0004, 0, 0, 0, 0)  # left up
+
+
+def launch_ba_game(timeout=600):
+    """Open the JP launcher and press スタート until the game process appears. Returns True on success.
+    Clicking is repeated because the launcher may still be checking for updates the first few times."""
+    make_dpi_aware()
+    print(f"[{ts()}] 正在启动蔚蓝档案启动器: {BA_LAUNCHER_PATH}")
+    subprocess.Popen([BA_LAUNCHER_PATH], cwd=os.path.dirname(BA_LAUNCHER_PATH))
+    start = time.time()
+    while time.time() - start < timeout:
+        time.sleep(10)
+        if process_running(BA_GAME_EXE):
+            print(f"[{ts()}] 游戏已启动，等待标题画面加载...")
+            time.sleep(30)  # let the title screen load before BAAS takes over
+            return True
+        hwnd = main_window_of(BA_LAUNCHER_EXE)
+        if hwnd:
+            print(f"[{ts()}] 点击启动器的 スタート")
+            click_in_window(hwnd, *BA_START_BUTTON)
+    return False
 
 
 # ==========================================
@@ -418,6 +573,60 @@ def run_wuthering():
     return parse_ww_log(read_since(WW_LOG_PATH, offset), reason)
 
 
+def run_bluearchive(start_timeout=300, timeout=5400):
+    """Switch BA to 1280x720 windowed, open the game through its launcher, run BAAS until it exits
+    on its own, then close everything and restore the display.
+
+    BlueArchiveAutoScript.exe is only a launcher: it checks for updates, starts BAAS (pythonw.exe
+    inside the BAAS folder) and exits. So we watch every process living in the BAAS folder instead.
+    """
+    set_display(BA_REG_KEY, UNITY_WINDOWED)
+    start = time.time()
+    reason = "timeout"
+    saw_baas = False  # did the real BAAS (pythonw.exe) ever start?
+    try:
+        if not launch_ba_game():
+            reason = "game_not_started"
+            raise TimeoutError("game did not start from the launcher")
+        start = time.time()  # time BAAS itself, not the launcher
+        print(f"[{ts()}] 正在启动: {BAAS_EXE}")
+        # Give the BAAS launcher its own console window so its output doesn't flood ours
+        subprocess.Popen([BAAS_EXE], cwd=BAAS_DIR, creationflags=subprocess.CREATE_NEW_CONSOLE)
+        while time.time() - start < timeout:
+            time.sleep(15)
+            procs = baas_processes(BAAS_DIR)
+            if any((p.info.get("name") or "").lower() == "pythonw.exe" for p in procs):
+                saw_baas = True
+            if not procs:
+                reason = "exited" if saw_baas else "not_started"
+                break
+            if not saw_baas and time.time() - start > start_timeout:
+                reason = "not_started"
+                break
+        print(f"[{ts()}] 结束原因: {reason}")
+    except TimeoutError as e:
+        print(f"⚠️ {e}")
+    finally:
+        # Always clean up and give the display settings back, even if something above failed
+        kill_processes(baas_processes(BAAS_DIR))
+        kill([BA_GAME_EXE, BA_LAUNCHER_EXE])
+        time.sleep(3)
+
+    minutes = (time.time() - start) / 60
+    lines = ["『📘 蔚蓝档案战报』"]
+    if reason == "exited" and minutes >= 3:
+        lines.append(f"BAAS 日常：✅已运行完毕（用时 {minutes:.0f} 分钟）")
+    elif reason == "exited":
+        lines.append(f"BAAS 日常：⚠️很快就退出（{minutes:.1f} 分钟），可能没有到期的任务")
+    elif reason == "game_not_started":
+        lines.append("BAAS 日常：❌游戏没有从启动器打开（スタート 没点到？）")
+    elif reason == "not_started":
+        lines.append("BAAS 日常：❌BAAS 没有启动（启动器可能更新失败）")
+    else:
+        lines.append(f"BAAS 日常：⚠️超时，已强制结束（{minutes:.0f} 分钟）")
+    return "\n".join(lines)
+
+
 def safe_section(name, func):
     """Run one game section; an unexpected error is reported instead of crashing the whole morning."""
     try:
@@ -436,6 +645,8 @@ def parse_args():
     p.add_argument("--dry-run", action="store_true",
                    help="launch nothing; parse an existing MaaEnd log and print the report")
     p.add_argument("--endfield-log", help="MaaEnd log to parse in --dry-run (default: current go-service.log)")
+    p.add_argument("--only", choices=["endfield", "arknights", "wuthering", "bluearchive"],
+                   help="run one game only; print the report, no Telegram, no shutdown")
     return p.parse_args()
 
 
@@ -448,14 +659,14 @@ def main():
         print(parse_endfield_log(read_since(path, 0)))
         return
 
+    if args.only:
+        runners = {"endfield": run_endfield, "arknights": run_arknights,
+                   "wuthering": run_wuthering, "bluearchive": run_bluearchive}
+        print(safe_section(args.only, runners[args.only]))
+        return
+
     mute_volume()
     print("=== Dawnshift 启动 (pagent) ===")
-
-    if not check_switch(SWITCH_FILE):
-        print("检测到总开关为 [OFF]。")
-        if not args.no_shutdown:
-            shutdown()
-        return
 
     sections = [safe_section("终末地", run_endfield)]
 
@@ -468,6 +679,12 @@ def main():
         sections.append(safe_section("鸣潮", run_wuthering))
     else:
         print("今天不跑鸣潮（不是周一或开关为 OFF）。")
+
+    # Blue Archive last: JP daily reset is 04:00 JST (06:00 Melbourne in daylight saving)
+    if check_switch(BA_SWITCH_FILE):
+        sections.append(safe_section("蔚蓝档案", run_bluearchive))
+    else:
+        print("蔚蓝档案开关为 [OFF]，跳过。")
 
     report = "\n\n".join(sections)
     print("\n" + report + "\n")

@@ -31,7 +31,7 @@ After the games finish, it builds a report and sends it to Telegram:
 
 『📘 蔚蓝档案战报』
 BAAS 日常：✅已运行完毕（用时 25 分钟）
-```
+
 『⚡ 绝区零战报』
 兑换码：✅今日已完成
 每日签到：✅今日已完成
@@ -42,6 +42,7 @@ BAAS 日常：✅已运行完毕（用时 25 分钟）
 丽都城募：✅今日已完成
 丽都周纪 (领奖励)：✅今日已完成
 一条龙：✅全部结束（用时 2 分钟）
+```
 
 ## Two versions
 
@@ -130,7 +131,7 @@ Dawnshift only orchestrates these tools and reads their logs — all the actual 
 - [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) — Arknights
 - [ok-wuthering-waves](https://github.com/ok-oldking/ok-wuthering-waves) — Wuthering Waves
 - [BAAS](https://github.com/pur1fying/blue_archive_auto_script) — Blue Archive
-- [OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon)
+- [OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon) — ZZZ
 This repo doesn't include or redistribute any of their code. Each project has its own license; please check them before use.
 
 ## Disclaimer

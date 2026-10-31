@@ -3,7 +3,7 @@ import os
 import re
 import sys
 
-# Make the parent folder (Daily) importable so we can import agentv2
+# Make the parent folder (Daily) importable so we can import agent
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent import read_tail_log_endfield, ai_analyze_logs, MAA_LOG_DIR

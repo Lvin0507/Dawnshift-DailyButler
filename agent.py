@@ -443,9 +443,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"⚠️ 静音模式激活失败: {e}")
 
-    print("=== Dawnshift 启动 (pagent) ===")
-        
-    print("检测到总开关为 [ON]。准备打工...")
+    print("=== Dawnshift 启动 (agent) ===")
     
     # ==========================================
     # 1. Endfield: MaaEnd launches the game itself (or fall back to the old launcher click)

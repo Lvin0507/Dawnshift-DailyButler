@@ -10,6 +10,7 @@ Clears my game dailies before I wake up: a Windows script that runs four game-au
 | Arknights (PC client) | [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | Recruitment, base shifts, credit store, rewards |
 | Wuthering Waves | [ok-ww](https://github.com/ok-oldking/ok-wuthering-waves) | Weekly garden task, Mondays only |
 | Blue Archive (JP, PC client) | [BAAS](https://github.com/pur1fying/blue_archive_auto_script) | Cafe, lessons, arena, sweeps, crafting, rewards |
+| Zenless Zone Zero (Steam client) | [OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon) | Redeem Codes, Daily check-in, mail, ... |
 
 After the games finish, it builds a report and sends it to Telegram:
 
@@ -31,6 +32,16 @@ After the games finish, it builds a report and sends it to Telegram:
 『📘 蔚蓝档案战报』
 BAAS 日常：✅已运行完毕（用时 25 分钟）
 ```
+『⚡ 绝区零战报』
+兑换码：✅今日已完成
+每日签到：✅今日已完成
+邮件：✅今日已完成
+录像店营业：✅今日已完成
+咖啡店：✅今日已完成
+活跃度奖励：✅今日已完成
+丽都城募：✅今日已完成
+丽都周纪 (领奖励)：✅今日已完成
+一条龙：✅全部结束（用时 2 分钟）
 
 ## Two versions
 
@@ -49,9 +60,10 @@ Both read the same `.env`.
 - MaaEnd, MAA, ok-ww and BAAS installed and configured separately:
   - MaaEnd: enable "Launch Game (PC)" as the first task, and "kill process" as the last
   - MAA: connection set to PC client, "start game" path set, "run on startup" enabled
-  - BAAS: "run on startup" and "start emulator on startup" enabled (point it at the original game client, not a translated one), "exit BAAS when done" selected
-- BAAS clicks with the real mouse, so leave the PC alone while it runs — moving the mouse makes it stop
-  - Blue Archive opens in a 1280x720 window after a run (the script needs it); press Alt+Enter to go back to full screen
+  - BAAS: "run on startup" enabled, "start emulator on startup" **disabled** (the script opens the JP launcher and clicks スタート itself), "exit BAAS when done" selected
+- BAAS and the launcher click with the real mouse, so leave the PC alone while they run — moving the mouse makes BAAS stop
+- Blue Archive opens in a 1280x720 window after a run (the script needs it); press Alt+Enter to go back to full screen
+- Steam must be logged into the account that have ZZZ.
 
 ## Setup
 
@@ -107,6 +119,8 @@ Problems I hit while building this, and what fixed them:
 - **The script needs a 1280x720 window, but I play full screen.** Blue Archive (Unity) keeps its window size in the registry, so the script writes a 1280x720 window before launching. Restoring full screen afterwards turned out not to be possible from the registry: the game's full-screen toggle isn't stored in Unity's standard settings, and an earlier save-and-restore approach also broke once an interrupted run left the window values behind. So the script only sets the window it needs, and I press Alt+Enter when I play.
 - **"Wait for the process to exit" waited for the wrong process.** BAAS's `.exe` is only a launcher that starts the real script and quits. The script now tracks every process running from inside the BAAS folder, matching on the path so it never touches its own `python.exe`.
 - **Redirecting a tool's output crashed it.** BAAS's launcher prints a banner with block characters. Sent to a file, Python fell back to the system's Japanese code page (cp932), which can't encode them, and the launcher died before starting BAAS. Giving it its own console window fixed it.
+- **The JP client can't be started directly.** Running `BlueArchive.exe` by itself crashes at login, and the official launcher has no auto-start option. The script opens the launcher, finds its window by process, and clicks スタート (as a fraction of the window size, so it survives DPI scaling) until the game process appears.
+- **The Steam build of ZZZ can't be launched directly.** Starting the game exe makes it quit and ask for Steam, and Steam then opens the HoYoverse launcher, which needs a click on its start button. The script starts the game through `steam://rungameid/`, clicks the launcher's button the same way it does for Blue Archive, and only then hands the running game to OneDragon. It also waits for the Asia server's 04:00 UTC+8 reset, so the run counts for the right day.
 
 ## Built on
 
@@ -116,7 +130,7 @@ Dawnshift only orchestrates these tools and reads their logs — all the actual 
 - [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) — Arknights
 - [ok-wuthering-waves](https://github.com/ok-oldking/ok-wuthering-waves) — Wuthering Waves
 - [BAAS](https://github.com/pur1fying/blue_archive_auto_script) — Blue Archive
-
+- [OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon)
 This repo doesn't include or redistribute any of their code. Each project has its own license; please check them before use.
 
 ## Disclaimer

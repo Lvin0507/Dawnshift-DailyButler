@@ -65,7 +65,7 @@ MAA_ARK_LOG = require_env("MAA_ARK_LOG")
 MAA_DONE_MARKERS = ["任务已全部完成"]
 ARK_GAME_EXE = "Arknights.exe"
 
-# Blue Archive JP (BAAS, PC client) - BAAS starts the game and exits by itself when done
+# Blue Archive JP (BAAS, PC client) - we open the game via its launcher; BAAS exits by itself when done
 BA_SWITCH_FILE = require_env("BA_SWITCH_FILE")
 BAAS_DIR = require_env("BAAS_DIR")
 # The BAAS launcher; set BAAS_EXE in .env if yours has a different name
@@ -91,6 +91,19 @@ UNITY_WINDOWED = {
     "Screenmanager Window Position X": 0,
     "Screenmanager Window Position Y": 0,
 }
+
+# Zenless Zone Zero (OneDragon, Steam client) - OneDragon starts the game with its own window settings
+ZZZ_SWITCH_FILE = require_env("ZZZ_SWITCH_FILE")
+ZZZ_OD_DIR = require_env("ZZZ_OD_DIR")
+# The OneDragon launcher; set ZZZ_OD_EXE in .env if yours has a different name
+ZZZ_OD_EXE = os.getenv("ZZZ_OD_EXE") or os.path.join(ZZZ_OD_DIR, "OneDragon-Launcher.exe")
+ZZZ_GAME_EXE = "ZenlessZoneZero.exe"
+ZZZ_LOG = os.path.join(ZZZ_OD_DIR, ".log", "log.txt")
+# The Steam build must be started by Steam, so we launch it through the Steam URL
+ZZZ_STEAM_APPID = require_env("ZZZ_STEAM_APPID")
+# Steam opens the miHoYo launcher first, which needs a click on its start button
+ZZZ_LAUNCHER_EXE = "HYP.exe"
+ZZZ_START_BUTTON = (0.770, 0.862)  # measure with scripts/measure_click.py
 
 # Telegram
 TG_BOT_TOKEN = require_env("TG_BOT_TOKEN")
@@ -225,10 +238,10 @@ def set_display(key_path, values):
             winreg.SetValueEx(key, name, 0, winreg.REG_DWORD, values[prefix])
 
 
-def baas_processes(baas_dir):
-    """Processes whose executable lives inside the BAAS folder (launcher, bundled pythonw, OCR server).
-    Matching on the path keeps us from touching our own python.exe or anyone else's pythonw.exe."""
-    root = os.path.normcase(os.path.abspath(baas_dir)) + os.sep
+def processes_in(folder):
+    """Processes whose executable lives inside `folder` (e.g. a tool's bundled python).
+    Matching on the path keeps us from touching our own python.exe or anyone else's."""
+    root = os.path.normcase(os.path.abspath(folder)) + os.sep
     procs = []
     for p in psutil.process_iter(["exe", "name"]):
         exe = p.info.get("exe")
@@ -246,7 +259,7 @@ def kill_processes(procs):
 
 
 user32 = ctypes.windll.user32
-
+user32.GetForegroundWindow.restype = wintypes.HWND
 
 def make_dpi_aware():
     """Use real pixel coordinates even with 125%/150% display scaling (safe to call more than once)."""
@@ -289,11 +302,26 @@ def main_window_of(exe_name):
     return best
 
 
+
+
+
 def click_in_window(hwnd, fx, fy):
-    """Bring the window to the front and click with the real mouse at a fraction of its client area."""
+    """Bring the window to the front and click with the real mouse at a fraction of its client area.
+    Skips the click if the window can't be brought to the front, so a real-mouse click never
+    lands on some other window that happens to be on top. Returns True if it clicked."""
     user32.ShowWindow(hwnd, 9)  # SW_RESTORE
     user32.SetForegroundWindow(hwnd)
     time.sleep(0.5)
+    if user32.GetForegroundWindow() != hwnd:
+        # Windows sometimes refuses focus changes; minimizing and restoring usually gets around it
+        user32.ShowWindow(hwnd, 6)  # SW_MINIMIZE
+        time.sleep(0.3)
+        user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+        user32.SetForegroundWindow(hwnd)
+        time.sleep(0.5)
+    if user32.GetForegroundWindow() != hwnd:
+        print(f"[{ts()}] ⚠️ 启动器窗口不在最前面，这次先不点击")
+        return False
     rect = wintypes.RECT()
     user32.GetClientRect(hwnd, ctypes.byref(rect))
     point = wintypes.POINT(int(rect.right * fx), int(rect.bottom * fy))
@@ -303,26 +331,33 @@ def click_in_window(hwnd, fx, fy):
     user32.mouse_event(0x0002, 0, 0, 0, 0)  # left down
     time.sleep(0.05)
     user32.mouse_event(0x0004, 0, 0, 0, 0)  # left up
+    return True
 
-
-def launch_ba_game(timeout=600):
-    """Open the JP launcher and press スタート until the game process appears. Returns True on success.
-    Clicking is repeated because the launcher may still be checking for updates the first few times."""
+def launch_and_click(open_launcher, launcher_exe, button, game_exe, wait_after=30, timeout=600):
+    """Open a game launcher, then keep clicking its start button until the game process appears.
+    `open_launcher` is a callable, so it can start an .exe or a Steam URL.
+    Clicking is repeated because the launcher may still be checking for updates at first."""
     make_dpi_aware()
-    print(f"[{ts()}] 正在启动蔚蓝档案启动器: {BA_LAUNCHER_PATH}")
-    subprocess.Popen([BA_LAUNCHER_PATH], cwd=os.path.dirname(BA_LAUNCHER_PATH))
+    open_launcher()
     start = time.time()
     while time.time() - start < timeout:
         time.sleep(10)
-        if process_running(BA_GAME_EXE):
-            print(f"[{ts()}] 游戏已启动，等待标题画面加载...")
-            time.sleep(30)  # let the title screen load before BAAS takes over
+        if process_running(game_exe):
+            print(f"[{ts()}] 游戏已启动，等待加载...")
+            time.sleep(wait_after)  # let the title screen load before the script takes over
             return True
-        hwnd = main_window_of(BA_LAUNCHER_EXE)
+        hwnd = main_window_of(launcher_exe)
         if hwnd:
-            print(f"[{ts()}] 点击启动器的 スタート")
-            click_in_window(hwnd, *BA_START_BUTTON)
+            print(f"[{ts()}] 点击启动器的开始按钮 ({launcher_exe})")
+            click_in_window(hwnd, *button)
     return False
+
+def launch_ba_game():
+    """Open the JP launcher and press スタート until the game process appears."""
+    print(f"[{ts()}] 正在启动蔚蓝档案启动器: {BA_LAUNCHER_PATH}")
+    return launch_and_click(
+        lambda: subprocess.Popen([BA_LAUNCHER_PATH], cwd=os.path.dirname(BA_LAUNCHER_PATH)),
+        BA_LAUNCHER_EXE, BA_START_BUTTON, BA_GAME_EXE)
 
 
 # ==========================================
@@ -548,6 +583,60 @@ def parse_ww_log(text, reason):
     lines.append(f"每周花园：{status}")
     return "\n".join(lines)
 
+ZZZ_LINE = re.compile(r"指令\[ (.+?) \] (?:节点 .*?返回状态 (.*)|执行成功 返回状态 (.*)|执行失败 返回状态 (.*))$")
+
+
+def parse_zzz_log(text, reason, minutes):
+    """Build the ZZZ report from this run's OneDragon log.txt lines.
+
+    OneDragon logs every operation as 指令[ name ]. The apps of the one-dragon group are the
+    operations that start right after a line from 指令[ 执行应用组 ... ]; everything inside an app
+    (Return to World, Teleport, ...) is a sub-step and is ignored.
+    """
+    results = {}            # app name -> status text, in run order
+    expect_app = False      # the next operation to start is a top-level app
+    current = None
+    overall = None
+    for line in text.splitlines():
+        m = ZZZ_LINE.search(line.strip())
+        if not m:
+            continue
+        name, node_status, ok_status, fail_status = m.groups()
+
+        if name.startswith("执行应用组"):
+            expect_app = True
+            # "应用已完成 X" = already done today; "应用未启用 X" = disabled, not reported
+            if node_status and node_status.startswith("应用已完成 "):
+                results[node_status.split(" ", 1)[1]] = "✅今日已完成"
+            continue
+        if name == "一条龙":
+            if ok_status is not None:
+                overall = ("ok", ok_status)
+            elif fail_status is not None:
+                overall = ("fail", fail_status)
+            continue
+
+        if expect_app and node_status is not None:
+            current, expect_app = name, False
+            results.setdefault(current, "⚠️未结束")
+        elif name == current and ok_status is not None:
+            results[current] = "✅成功"
+        elif name == current and fail_status is not None:
+            results[current] = f"❌失败({fail_status})"
+
+    lines = ["『⚡ 绝区零战报』"]
+    if not results and overall is None:
+        lines.append(f"一条龙：⚠️日志里没有任务记录（结束原因: {reason}）")
+        return "\n".join(lines)
+    for app, status in results.items():
+        lines.append(f"{app}：{status}")
+    if overall and overall[0] == "ok":
+        lines.append(f"一条龙：✅全部结束（用时 {minutes:.0f} 分钟）")
+    elif overall:
+        lines.append(f"一条龙：❌中断({overall[1]})")
+    else:
+        lines.append(f"一条龙：⚠️未检测到结束记录（结束原因: {reason}）")
+    return "\n".join(lines)
 
 # ==========================================
 # 5. Game sections
@@ -562,6 +651,7 @@ def run_endfield():
 
 def run_arknights():
     reason, maa_log = run_until_log_marker(MAA_ARK_PATH, "MAA.exe", MAA_ARK_LOG, MAA_DONE_MARKERS, ARK_GAME_EXE)
+    kill(["Gryphlink.exe"])  # the Arknights PC client can bring up GRYPHLINK too
     return parse_maa_log(maa_log, reason)
 
 
@@ -575,7 +665,7 @@ def run_wuthering():
 
 def run_bluearchive(start_timeout=300, timeout=5400):
     """Switch BA to 1280x720 windowed, open the game through its launcher, run BAAS until it exits
-    on its own, then close everything and restore the display.
+    on its own, then close everything.
 
     BlueArchiveAutoScript.exe is only a launcher: it checks for updates, starts BAAS (pythonw.exe
     inside the BAAS folder) and exits. So we watch every process living in the BAAS folder instead.
@@ -594,7 +684,7 @@ def run_bluearchive(start_timeout=300, timeout=5400):
         subprocess.Popen([BAAS_EXE], cwd=BAAS_DIR, creationflags=subprocess.CREATE_NEW_CONSOLE)
         while time.time() - start < timeout:
             time.sleep(15)
-            procs = baas_processes(BAAS_DIR)
+            procs = processes_in(BAAS_DIR)
             if any((p.info.get("name") or "").lower() == "pythonw.exe" for p in procs):
                 saw_baas = True
             if not procs:
@@ -607,8 +697,8 @@ def run_bluearchive(start_timeout=300, timeout=5400):
     except TimeoutError as e:
         print(f"⚠️ {e}")
     finally:
-        # Always clean up and give the display settings back, even if something above failed
-        kill_processes(baas_processes(BAAS_DIR))
+        # Always clean up, even if something above failed
+        kill_processes(processes_in(BAAS_DIR))
         kill([BA_GAME_EXE, BA_LAUNCHER_EXE])
         time.sleep(3)
 
@@ -626,6 +716,70 @@ def run_bluearchive(start_timeout=300, timeout=5400):
         lines.append(f"BAAS 日常：⚠️超时，已强制结束（{minutes:.0f} 分钟）")
     return "\n".join(lines)
 
+def launch_zzz_via_steam():
+    """The Steam build must be started by Steam, which opens the miHoYo launcher;
+    press its start button until the game process appears. OneDragon then attaches to it."""
+    print(f"[{ts()}] 通过 Steam 启动绝区零 (app {ZZZ_STEAM_APPID})")
+    return launch_and_click(
+        lambda: os.startfile(f"steam://rungameid/{ZZZ_STEAM_APPID}"),
+        ZZZ_LAUNCHER_EXE, ZZZ_START_BUTTON, ZZZ_GAME_EXE, wait_after=60)
+
+def wait_for_zzz_reset(margin_minutes=5, max_wait_hours=2):
+    """The Asia server resets at 04:00 UTC+8 (07:00 Melbourne in daylight saving).
+    Wait until just after it, so the run counts for today rather than yesterday."""
+    utc8 = datetime.timezone(datetime.timedelta(hours=8))
+    now = datetime.datetime.now(utc8)
+    reset = now.replace(hour=4, minute=margin_minutes, second=0, microsecond=0)
+    wait = (reset - now).total_seconds()
+    if 0 < wait <= max_wait_hours * 3600:
+        print(f"[{ts()}] 等待绝区零每日刷新（约 {wait / 60:.0f} 分钟）...")
+        time.sleep(wait)
+
+
+def run_zzz(wait_reset=True, timeout=7200):
+    """Open ZZZ through Steam and its launcher, then run OneDragon with -o -c.
+    Finished when OneDragon exits, or when the game closes after having run
+    (in case OneDragon's window stays open afterwards)."""
+    if wait_reset:
+        wait_for_zzz_reset()
+    log_offset = log_size(ZZZ_LOG)  # only report what this run writes
+    start = time.time()
+    reason = "timeout"
+    saw_od = saw_game = False
+    game_gone = 0
+    try:
+        if not launch_zzz_via_steam():
+            reason = "not_started"
+            raise TimeoutError("game did not start through Steam")
+        saw_game = True
+        print(f"[{ts()}] 正在启动: {ZZZ_OD_EXE} -o -c")
+        subprocess.Popen([ZZZ_OD_EXE, "-o", "-c"], cwd=ZZZ_OD_DIR,
+                         creationflags=subprocess.CREATE_NEW_CONSOLE)
+        while time.time() - start < timeout:
+            time.sleep(15)
+            procs = processes_in(ZZZ_OD_DIR)
+            saw_od = saw_od or bool(procs)
+            game_gone = 0 if process_running(ZZZ_GAME_EXE) else game_gone + 1
+            if saw_od and not procs:
+                reason = "exited"
+                break
+            # -c closes the game at the end; two misses in a row avoid a brief restart glitch
+            if game_gone >= 2:
+                reason = "game_closed"
+                break
+        print(f"[{ts()}] 结束原因: {reason}")
+    except TimeoutError as e:
+        print(f"⚠️ {e}")
+    finally:
+        # Always clean up, even if something above failed
+        kill_processes(processes_in(ZZZ_OD_DIR))
+        kill([ZZZ_GAME_EXE, ZZZ_LAUNCHER_EXE])
+        time.sleep(3)
+
+    minutes = (time.time() - start) / 60
+    if reason == "not_started":
+        return "『⚡ 绝区零战报』\n一条龙：❌游戏没有启动（检查 Steam 登录或启动器按钮位置）"
+    return parse_zzz_log(read_since(ZZZ_LOG, log_offset), reason, minutes)
 
 def safe_section(name, func):
     """Run one game section; an unexpected error is reported instead of crashing the whole morning."""
@@ -645,7 +799,7 @@ def parse_args():
     p.add_argument("--dry-run", action="store_true",
                    help="launch nothing; parse an existing MaaEnd log and print the report")
     p.add_argument("--endfield-log", help="MaaEnd log to parse in --dry-run (default: current go-service.log)")
-    p.add_argument("--only", choices=["endfield", "arknights", "wuthering", "bluearchive"],
+    p.add_argument("--only", choices=["endfield", "arknights", "wuthering", "bluearchive","zzz"],
                    help="run one game only; print the report, no Telegram, no shutdown")
     return p.parse_args()
 
@@ -661,7 +815,8 @@ def main():
 
     if args.only:
         runners = {"endfield": run_endfield, "arknights": run_arknights,
-                   "wuthering": run_wuthering, "bluearchive": run_bluearchive}
+                   "wuthering": run_wuthering, "bluearchive": run_bluearchive,
+                   "zzz": lambda: run_zzz(wait_reset=False)}
         print(safe_section(args.only, runners[args.only]))
         return
 
@@ -685,6 +840,12 @@ def main():
         sections.append(safe_section("蔚蓝档案", run_bluearchive))
     else:
         print("蔚蓝档案开关为 [OFF]，跳过。")
+
+    # ZZZ last: it may wait for the Asia server's 04:00 UTC+8 reset
+    if check_switch(ZZZ_SWITCH_FILE):
+        sections.append(safe_section("绝区零", run_zzz))
+    else:
+        print("绝区零开关为 [OFF]，跳过。")
 
     report = "\n\n".join(sections)
     print("\n" + report + "\n")

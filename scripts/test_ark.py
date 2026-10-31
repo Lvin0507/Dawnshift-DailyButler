@@ -2,7 +2,7 @@
 import os
 import sys
 
-# Make the parent folder (Daily) importable so we can import agentv2
+# Make the parent folder (Daily) importable so we can import agent
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent import run_until_log_marker, parse_maa_log, MAA_ARK_PATH, MAA_ARK_LOG, MAA_DONE_MARKERS, ARK_GAME_EXE

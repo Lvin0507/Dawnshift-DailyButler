@@ -1,4 +1,5 @@
 # Secrets and local config
+config.json
 .env
 
 # Runtime output
@@ -8,5 +9,6 @@ __pycache__/
 
 # Personal exports / screenshots
 *.json
+!config.example.json
 *.png
 *.jpg

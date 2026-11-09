@@ -1,0 +1,21 @@
+{
+  "language": "en",
+  "report_language": "en",
+  "telegram": {"enabled": false, "bot_token": "", "chat_id": ""},
+  "options": {"mute": true, "dim_screen": false, "shutdown": true},
+  "games": {
+    "endfield": {"enabled": false, "days": [0, 1, 2, 3, 4, 5, 6],
+                 "maaend_path": "", "log_dir": ""},
+    "arknights": {"enabled": false, "days": [0, 1, 2, 3, 4, 5, 6],
+                  "maa_path": "", "maa_log": "", "game_exe": "Arknights.exe"},
+    "wuthering": {"enabled": false, "days": [0], "steam_client": false,
+                  "okww_path": "", "log_path": "", "task": "GardenTask"},
+    "bluearchive": {"enabled": false, "days": [0, 1, 2, 3, 4, 5, 6], "wait_for_reset": true,
+                    "baas_dir": "", "baas_exe": "", "launcher_path": "",
+                    "start_button": [0.852, 0.859]},
+    "zzz": {"enabled": false, "days": [0, 1, 2, 3, 4, 5, 6], "wait_for_reset": true,
+            "server": "asia", "client": "official",
+            "od_dir": "", "steam_appid": "4162040",
+            "launcher_exe": "HYP.exe", "start_button": [0.85, 0.86]}
+  }
+}

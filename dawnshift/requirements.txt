@@ -1,0 +1,6 @@
+requests
+python-dotenv
+psutil
+pycaw
+comtypes
+screen-brightness-control

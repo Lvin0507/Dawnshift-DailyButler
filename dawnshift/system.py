@@ -249,3 +249,17 @@ class QuietMode:
 def shutdown(delay=5):
     time.sleep(delay)
     subprocess.run(["shutdown", "/s", "/t", "0"])
+
+def session_locked():
+    """True while the lock or sign-in screen is up. Screen capture and real-mouse clicks don't
+    work there, so no tool can do anything until someone signs in."""
+    return process_running("LogonUI.exe")
+
+
+def wait_for_unlock(max_wait=120):
+    """Give Windows a moment after waking; return False if it is still on the lock screen."""
+    waited = 0
+    while session_locked() and waited < max_wait:
+        time.sleep(10)
+        waited += 10
+    return not session_locked()

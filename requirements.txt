@@ -4,3 +4,4 @@ psutil
 pycaw
 comtypes
 screen-brightness-control
+customtkinter

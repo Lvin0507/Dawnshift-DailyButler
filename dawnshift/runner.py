@@ -7,7 +7,7 @@ from . import report as R
 from .config import load_config
 from .games import GAMES, GAMES_BY_ID
 from .i18n import game_name, t
-from .system import QuietMode, shutdown, ts, wait_for_reset
+from .system import QuietMode, shutdown, ts, wait_for_reset, wait_for_unlock
 
 
 def due_today(game_cfg):
@@ -34,12 +34,9 @@ def run_game(game_cls, game_cfg, lang, wait_reset=True):
         return rep
 
 
-def run_all(cfg=None, only=None, allow_shutdown=True, send=True, log=print):
-    """Run every game that is enabled and due today (or just `only`), then report."""
-    cfg = cfg or load_config()
-    lang = cfg.get("report_language", "en")
+def run_games(cfg, only, lang, opts, log):
+    """Run every game that is enabled and due today (or just `only`) and return their reports."""
     reports = []
-    opts = cfg["options"]
     with QuietMode(mute=opts.get("mute", True), dim=opts.get("dim_screen", False)):
         for game_cls in GAMES:
             gid = game_cls.id
@@ -55,6 +52,21 @@ def run_all(cfg=None, only=None, allow_shutdown=True, send=True, log=print):
                 continue
             # a single-game test run shouldn't sit waiting for a reset
             reports.append(run_game(game_cls, game_cfg, lang, wait_reset=not only))
+    return reports
+
+
+def run_all(cfg=None, only=None, allow_shutdown=True, send=True, log=print):
+    """Run the games, then send the report and (optionally) shut down."""
+    cfg = cfg or load_config()
+    lang = cfg.get("report_language", "en")
+    opts = cfg["options"]
+    # On the lock screen no tool can see or click anything, so report it instead of hanging
+    if not only and not wait_for_unlock():
+        rep = R.GameReport("system")
+        rep.note("note.locked")
+        reports = [rep]
+    else:
+        reports = run_games(cfg, only, lang, opts, log)
 
     text = R.render_all(reports, lang)
     log("\n" + text + "\n")

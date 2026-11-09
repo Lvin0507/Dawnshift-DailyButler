@@ -117,10 +117,14 @@ class Endfield(Game):
         subprocess.Popen([path], cwd=os.path.dirname(path))
         time.sleep(15)
         start = time.time()
+        log = os.path.join(self.cfg["log_dir"], "go-service.log")
         while process_running("MaaEnd.exe") and time.time() - start < timeout:
             time.sleep(10)
+            # MaaEnd stays open after its launch step fails; don't wait out the whole timeout
+            if "failed to run launcher pipeline" in read_since(log, 0):
+                print(f"[{ts()}] MaaEnd could not start the game; stopping it")
+                break
         kill(["MaaEnd.exe", "Endfield.exe", "Gryphlink.exe"])
         time.sleep(5)
         archive_log(self.cfg["log_dir"])
-        log = read_since(os.path.join(self.cfg["log_dir"], "go-service.log"), 0)
-        return parse_endfield_log(log, self.new_report())
+        return parse_endfield_log(read_since(log, 0), self.new_report())

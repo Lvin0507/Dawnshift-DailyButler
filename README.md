@@ -63,18 +63,23 @@ If you are using the PC when the scheduled time comes, it asks first and gives y
 
 ## Setup
 
-1. Install the dependencies:
+1. Install Python 3.10 or newer (**64-bit**; the app's interface library has no 32-bit version), then the dependencies:
    ```
    pip install -r requirements.txt
    ```
-2. Double-click `Gachashift App.bat` to open the app (it edits `config.json` for you).
-3. **Home**: turn on the games you play.
-4. **Games**: for each game, fill in the paths with **Browse**, pick its weekdays, and use the link to the tool's own page if you still need to set the tool up. For Blue Archive and Steam ZZZ, open the game's launcher and press **Calibrate** next to the start button position.
-5. **General**: choose the languages, what happens while running (mute, dim, shut down), and your Telegram bot. **Send a test message** checks the bot right away.
-6. **Run**: use **Test one game** for each game first, then **Run everything now** once. Windows asks for admin rights, because the games need them.
-7. **Schedule**: pick a time and press **Save schedule**. This creates a Task Scheduler task that runs with highest privileges and never starts late after a missed time. If you made a task by hand before, delete it so the games don't run twice.
+2. Double-click `Gachashift App.bat`.
 
-Past runs are under **History**.
+The app takes it from there. Home shows a short setup checklist with a button for each step: turn on your games, tell Gachashift where each tool is, do one test run, connect Telegram (optional), and choose when to run. Every setting has a one-line hint under it, and each game's page links to its tool's own documentation. When all five steps are done, the checklist goes away.
+
+Other pages:
+
+- **Run**: run everything now, or test one game; the output appears as it happens
+- **Schedule**: the daily Task Scheduler task (highest privileges, never starts late after a missed time)
+- **History**: past runs, with the report at the end
+- **General**: languages, mute / dim / shut down while running, Telegram with a test message
+- **Appearance**: a background image, panel opacity, accent colour, and an image for each game. Images are files on your PC; they stay there and are never uploaded or bundled
+
+While a run is going on, a **Stop** button appears on every page.
 
 ### Command line
 
@@ -106,7 +111,8 @@ Add `--lang zh` for a Chinese report.
 ```
 gachashift/           The program
   __main__.py         Command line (python -m gachashift)
-  app.py              The desktop app (python -m gachashift.app)
+  ui/                 The desktop app (PySide6; python -m gachashift.ui)
+  winutil.py          Elevated runs, the Task Scheduler task, calibration, per-game settings
   runner.py           Picks today's games, waits for resets, stop requests, report, shutdown
   prompt.py           The "about to start" window for scheduled runs
   config.py           config.json, defaults, and migration from the old .env

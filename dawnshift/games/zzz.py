@@ -76,7 +76,10 @@ class ZenlessZoneZero(Game):
 
     def run(self, timeout=7200):
         od_dir = self.cfg["od_dir"]
-        od_exe = os.path.join(od_dir, "OneDragon-Launcher.exe")
+        # The runtime launcher starts OneDragon without pulling code or reinstalling packages,
+        # so an unattended run can't stop at an update or driver-install prompt
+        runtime = os.path.join(od_dir, "OneDragon-RuntimeLauncher.exe")
+        od_exe = runtime if os.path.exists(runtime) else os.path.join(od_dir, "OneDragon-Launcher.exe")
         log = os.path.join(od_dir, ".log", "log.txt")
         steam = self.cfg.get("client") == "steam"
         offset = log_size(log)

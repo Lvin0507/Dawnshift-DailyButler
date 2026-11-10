@@ -1,54 +1,68 @@
-"""A small "about to start" window for scheduled runs, shown only when someone is at the PC."""
+"""A small "about to start" window for scheduled runs, shown only when someone is at the PC.
+Built with Qt like the app, so the packaged exe doesn't need a second GUI toolkit."""
 
-import tkinter as tk
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from .i18n import t
 
-NIGHT, PANEL, TEXT, MUTED, DAWN = "#141B2D", "#1C2540", "#E9E7F2", "#98A1BE", "#F4B860"
+BG, PANEL, TEXT, MUTED, ACCENT = "#141B2D", "#2D3858", "#E9E7F2", "#98A1BE", "#F4B860"
 
 
 def ask_before_start(lang, seconds=60):
     """Return True to go ahead, False if the user chose to skip this run. Nobody answering
     means nobody is there after all, so the run starts when the countdown ends."""
-    result = {"go": True}
-    root = tk.Tk()
-    root.title("Gachashift")
-    root.configure(bg=NIGHT)
-    root.attributes("-topmost", True)
-    root.resizable(False, False)
+    app = QApplication.instance() or QApplication([])
     family = "Microsoft YaHei UI" if lang == "zh" else "Segoe UI"
+    dialog = QDialog()
+    dialog.setWindowTitle("Gachashift")
+    dialog.setWindowFlags(Qt.Dialog | Qt.WindowStaysOnTopHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+    dialog.setStyleSheet(f"""
+        QDialog {{ background: {BG}; }}
+        * {{ font-family: "{family}"; font-size: 14px; color: {TEXT}; }}
+        QLabel#title {{ font-size: 18px; font-weight: 700; }}
+        QLabel#text {{ color: {MUTED}; }}
+        QPushButton {{ background: {PANEL}; border: none; border-radius: 8px; padding: 8px 18px; }}
+        QPushButton#start {{ background: {ACCENT}; color: {BG}; font-weight: 700; }}
+    """)
+    col = QVBoxLayout(dialog)
+    col.setContentsMargins(24, 20, 24, 20)
+    col.setSpacing(12)
+    title = QLabel(t(lang, "prompt.title"))
+    title.setObjectName("title")
+    text = QLabel()
+    text.setObjectName("text")
+    text.setWordWrap(True)
+    text.setFixedWidth(400)
+    col.addWidget(title)
+    col.addWidget(text)
+    row = QHBoxLayout()
+    skip = QPushButton(t(lang, "prompt.skip"))
+    start = QPushButton(t(lang, "prompt.start"))
+    start.setObjectName("start")
+    row.addWidget(skip)
+    row.addStretch()
+    row.addWidget(start)
+    col.addLayout(row)
 
-    tk.Label(root, text=t(lang, "prompt.title"), font=(family, 14, "bold"), bg=NIGHT, fg=TEXT
-             ).pack(anchor="w", padx=22, pady=(18, 6))
-    message = tk.Label(root, font=(family, 11), bg=NIGHT, fg=MUTED, wraplength=380, justify="left")
-    message.pack(anchor="w", padx=22)
-    buttons = tk.Frame(root, bg=NIGHT)
-    buttons.pack(fill="x", padx=22, pady=(14, 18))
+    result = {"go": True}
+    left = {"n": seconds}
 
-    def finish(go):
-        result["go"] = go
-        root.destroy()
-
-    tk.Button(buttons, text=t(lang, "prompt.skip"), font=(family, 11), bg=PANEL, fg=TEXT,
-              activebackground=PANEL, relief="flat", padx=14, pady=6,
-              command=lambda: finish(False)).pack(side="left")
-    tk.Button(buttons, text=t(lang, "prompt.start"), font=(family, 11, "bold"), bg=DAWN, fg=NIGHT,
-              activebackground=DAWN, relief="flat", padx=14, pady=6,
-              command=lambda: finish(True)).pack(side="right")
-
-    def tick(n):
-        if n <= 0:
-            finish(True)
+    def tick():
+        left["n"] -= 1
+        if left["n"] <= 0:
+            dialog.accept()
             return
-        message.configure(text=t(lang, "prompt.text", n=n))
-        root.after(1000, tick, n - 1)
+        text.setText(t(lang, "prompt.text", n=left["n"]))
 
-    root.protocol("WM_DELETE_WINDOW", lambda: finish(False))  # closing it counts as "skip"
-    tick(seconds)
-    # centre it on the screen, where someone at the PC will notice it
-    root.update_idletasks()
-    x = (root.winfo_screenwidth() - root.winfo_width()) // 2
-    y = (root.winfo_screenheight() - root.winfo_height()) // 3
-    root.geometry(f"+{x}+{y}")
-    root.mainloop()
+    timer = QTimer(dialog)
+    timer.timeout.connect(tick)
+    skip.clicked.connect(lambda: (result.update(go=False), dialog.reject()))
+    start.clicked.connect(dialog.accept)
+    dialog.rejected.connect(lambda: result.update(go=False))  # closing it counts as "skip"
+    left["n"] += 1
+    tick()
+    timer.start(1000)
+    dialog.exec()
+    timer.stop()
     return result["go"]

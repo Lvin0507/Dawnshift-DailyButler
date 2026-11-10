@@ -87,6 +87,42 @@ class SHELLEXECUTEINFO(ctypes.Structure):
                 ("hIconOrMonitor", wintypes.HANDLE), ("hProcess", wintypes.HANDLE)]
 
 
+def self_command(*options):
+    """(program, arguments) that start Gachashift's own run with these options. The packaged
+    Gachashift.exe takes `run ...`; from source it is `python -m gachashift ...`."""
+    if getattr(sys, "frozen", False):
+        return sys.executable, " ".join(["run", *options])
+    return sys.executable, " ".join(["-m", "gachashift", *options])
+
+
+GAMMA_KEY = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ICM"
+
+
+def darker_allowed():
+    """True once Windows allows any gamma ramp (GdiIcmGammaRange = 256)."""
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, GAMMA_KEY) as key:
+            return winreg.QueryValueEx(key, "GdiIcmGammaRange")[0] == 256
+    except OSError:
+        return False
+
+
+def allow_darker():
+    """Lift Windows' gamma limit (needs admin; usually takes effect after a restart).
+    Returns True if the change was made."""
+    handle = start_elevated(f'add "HKLM\\{GAMMA_KEY}" /v GdiIcmGammaRange /t REG_DWORD /d 256 /f',
+                            program="reg.exe", show=0)
+    if not handle:
+        return False
+    kernel32 = ctypes.windll.kernel32
+    kernel32.WaitForSingleObject(handle, 15000)
+    code = wintypes.DWORD()
+    kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+    kernel32.CloseHandle(handle)
+    return code.value == 0
+
+
 def start_elevated(args, program=None, show=7):
     """Start a program (default: this Python) with admin rights, after one UAC prompt, and return
     the process handle, or None if the user declined. The games need admin rights; the app doesn't.
@@ -147,6 +183,7 @@ def task_xml(hour, minute):
     logged-on user (the games need a real desktop), and never starts late after a missed time,
     so turning the PC on at noon doesn't suddenly take over the mouse."""
     start = f"{datetime.date.today():%Y-%m-%d}T{hour:02d}:{minute:02d}:00"
+    program, arguments = self_command()
     user = f"{os.environ.get('USERDOMAIN', '')}\\{os.environ.get('USERNAME', '')}"
     return f"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -176,8 +213,8 @@ def task_xml(hour, minute):
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>{escape(sys.executable)}</Command>
-      <Arguments>-m gachashift</Arguments>
+      <Command>{escape(program)}</Command>
+      <Arguments>{escape(arguments)}</Arguments>
       <WorkingDirectory>{escape(str(app_dir()))}</WorkingDirectory>
     </Exec>
   </Actions>

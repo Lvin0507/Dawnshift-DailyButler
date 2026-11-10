@@ -16,3 +16,10 @@ __pycache__/
 # Files a run creates while it is going on
 running.json
 stop.request
+
+# Build output
+build/
+dist/
+Gachashift.spec
+
+gamma.dim

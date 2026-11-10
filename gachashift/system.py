@@ -218,16 +218,88 @@ def wait_for_reset(utc_offset_hours, reset_hour=4, margin_minutes=5, max_wait_ho
     return 0
 
 
+# ---------- screen gamma ----------
+class _DISPLAY_DEVICE(ctypes.Structure):
+    _fields_ = [("cb", wintypes.DWORD), ("DeviceName", wintypes.WCHAR * 32),
+                ("DeviceString", wintypes.WCHAR * 128), ("StateFlags", wintypes.DWORD),
+                ("DeviceID", wintypes.WCHAR * 128), ("DeviceKey", wintypes.WCHAR * 128)]
+
+
+_RAMP = wintypes.WORD * 768  # 256 steps each for red, green and blue
+
+
+def gamma_marker():
+    """Present while the screens are darkened, so a run that died can be cleaned up later."""
+    return app_dir() / "gamma.dim"
+
+
+def _displays():
+    names, i = [], 0
+    while True:
+        device = _DISPLAY_DEVICE()
+        device.cb = ctypes.sizeof(device)
+        if not ctypes.windll.user32.EnumDisplayDevicesW(None, i, ctypes.byref(device), 0):
+            return names
+        if device.StateFlags & 1:  # attached to the desktop
+            names.append(device.DeviceName)
+        i += 1
+
+
+def _set_ramp(name, ramp):
+    gdi32 = ctypes.windll.gdi32
+    hdc = gdi32.CreateDCW("DISPLAY", name, None, None)
+    try:
+        return bool(gdi32.SetDeviceGammaRamp(hdc, ctypes.byref(ramp)))
+    finally:
+        gdi32.DeleteDC(hdc)
+
+
+def _linear_ramp(level):
+    ramp = _RAMP()
+    for channel in range(3):
+        for i in range(256):
+            ramp[channel * 256 + i] = min(65535, int(i * 257 * level))
+    return ramp
+
+
+def dim_gamma(level=0.05):
+    """Darken every display by lowering its gamma ramp to `level` (0-1). Only the light the
+    monitor gives off changes: screenshots and screen capture still see the normal picture, so
+    the tools keep working. Windows refuses very dark ramps unless GdiIcmGammaRange allows them,
+    so this steps up from `level` until each display accepts. Returns the level reached, or None."""
+    steps = [level] + [s / 100 for s in range(10, 101, 5) if s / 100 > level]
+    accepted = None
+    for name in _displays():
+        for step in steps:
+            if _set_ramp(name, _linear_ramp(step)):
+                accepted = max(accepted or 0, step)
+                break
+    if accepted is not None:
+        gamma_marker().touch()
+    return accepted
+
+
+def restore_gamma():
+    """Put every display back to the normal, linear gamma ramp."""
+    for name in _displays():
+        _set_ramp(name, _linear_ramp(1.0))
+    try:
+        gamma_marker().unlink()
+    except FileNotFoundError:
+        pass
+
+
 # ---------- quiet mode ----------
 class QuietMode:
     """Mute the speakers and/or dim the screens for the duration of a run, then restore
     exactly what was there before. Each part fails soft: a missing library or an external
     monitor without DDC/CI just means that part is skipped."""
 
-    def __init__(self, mute=True, dim=False):
-        self.mute, self.dim = mute, dim
+    def __init__(self, mute=True, dim=False, dim_level=0.3):
+        self.mute, self.dim, self.dim_level = mute, dim, dim_level
         self._volume = self._was_muted = None
         self._brightness = None
+        self._gamma = False
 
     def __enter__(self):
         if self.mute:
@@ -247,18 +319,32 @@ class QuietMode:
             except Exception as e:
                 print(f"mute skipped: {e}")
         if self.dim:
+            # hardware brightness works on laptops and DDC/CI monitors; gamma works almost
+            # everywhere else, so use both
             try:
                 import screen_brightness_control as sbc
                 self._brightness = sbc.get_brightness()
-                sbc.set_brightness(0)
+                sbc.set_brightness(int(self.dim_level * 100))
             except Exception as e:
-                print(f"dim skipped: {e}")
+                print(f"brightness not changed (monitor may not support it): {e}")
+            try:
+                level = dim_gamma(self.dim_level)
+                self._gamma = level is not None
+                print(f"screen darkened to {int(level * 100)}%" if self._gamma
+                      else "screen gamma not changed (the display refused it)")
+            except Exception as e:
+                print(f"gamma not changed: {e}")
         return self
 
     def __exit__(self, *exc):
         if self._volume is not None:
             try:
                 self._volume.SetMute(self._was_muted, None)
+            except Exception:
+                pass
+        if self._gamma:
+            try:
+                restore_gamma()
             except Exception:
                 pass
         if self._brightness is not None:

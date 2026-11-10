@@ -2,6 +2,14 @@
 
 Clears my game dailies before I wake up. Gachashift is a Windows app that runs five game-automation tools one after another every morning, checks each tool's log to see what actually got done, sends a short report to Telegram and shuts the PC down.
 
+## Download
+
+Get `Gachashift-x.y.z.zip` from [Releases](../../releases), unzip it to a folder you can write to (not Program Files), and open `Gachashift.exe`. The app walks you through the setup.
+
+Windows may say it "protected your PC", because the exe isn't code-signed: choose **More info → Run anyway**.
+
+You also need the automation tool for each game you play (MaaEnd, MAA, ok-ww, BAAS or OneDragon), set up and working on its own first. The app links to each one.
+
 ## What it does
 
 | Game | Tool | What runs |

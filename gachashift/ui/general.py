@@ -1,7 +1,12 @@
 """General: languages, what happens while running, and Telegram."""
 
 import requests
-from PySide6.QtWidgets import QCheckBox, QGridLayout, QHBoxLayout, QLineEdit, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import (QCheckBox, QGridLayout, QHBoxLayout, QLineEdit, QSlider, QVBoxLayout,
+                               QWidget)
+
+from ..system import dim_gamma, restore_gamma
+from ..winutil import allow_darker, darker_allowed
 
 from .widgets import Choice, Toggle, button, label, panel, shadowed
 
@@ -15,6 +20,99 @@ def switch_row(text, checked, on_toggle):
     toggle.toggled.connect(on_toggle)
     row.addWidget(toggle)
     return row
+
+
+def dim_controls(app, options):
+    """Brightness slider, a 5-second preview, and (when Windows caps it) Allow darker."""
+    holder = QWidget()
+    col = QVBoxLayout(holder)
+    col.setContentsMargins(0, 4, 0, 4)
+    col.setSpacing(8)
+    title = label(app.tr("general.dim_level", n=options.get("dim_level", 30)), "muted")
+    col.addWidget(title)
+    slider = QSlider(Qt.Horizontal)
+    slider.setRange(5, 100)
+    slider.setValue(int(options.get("dim_level", 30)))
+
+    def set_level(v):
+        title.setText(app.tr("general.dim_level", n=v))
+        app.set_option("dim_level", v)
+
+    slider.valueChanged.connect(set_level)
+    col.addWidget(slider)
+
+    row = QHBoxLayout()
+    preview = button(app.tr("general.preview"))
+    unlock = button(app.tr("general.unlock"))
+    unlock.setToolTip(app.tr("general.unlock_hint"))
+    unlock.setVisible(False)
+    row.addWidget(preview)
+    row.addWidget(unlock)
+    row.addStretch()
+    col.addLayout(row)
+    result = label("", "hint", wrap=True)
+    col.addWidget(result)
+
+    state = {"left": 0, "brightness": None, "reached": None}
+    timer = QTimer(holder)
+
+    def finish():
+        timer.stop()
+        try:
+            restore_gamma()
+        except Exception:
+            pass
+        if state["brightness"] is not None:
+            try:
+                import screen_brightness_control as sbc
+                for index, level in enumerate(state["brightness"]):
+                    sbc.set_brightness(level, display=index)
+            except Exception:
+                pass
+        preview.setEnabled(True)
+        wanted = slider.value() / 100
+        reached = state["reached"]
+        if reached is None:
+            result.setText(app.tr("general.preview_refused"))
+        elif reached > wanted + 0.001:
+            result.setText(app.tr("general.preview_capped", n=int(reached * 100)))
+            unlock.setVisible(not darker_allowed())
+        else:
+            result.setText(app.tr("general.preview_ok"))
+
+    def tick():
+        state["left"] -= 1
+        if state["left"] <= 0:
+            finish()
+        else:
+            result.setText(app.tr("general.preview_on", n=state["left"]))
+
+    def start():
+        level = slider.value() / 100
+        preview.setEnabled(False)
+        try:
+            import screen_brightness_control as sbc
+            state["brightness"] = sbc.get_brightness()
+            sbc.set_brightness(int(level * 100))
+        except Exception:
+            state["brightness"] = None
+        try:
+            state["reached"] = dim_gamma(level)
+        except Exception:
+            state["reached"] = None
+        state["left"] = 6
+        tick()
+        timer.start(1000)
+
+    def do_unlock():
+        ok = allow_darker()
+        result.setText(app.tr("general.unlock_done" if ok else "general.unlock_failed"))
+        unlock.setVisible(not ok)
+
+    timer.timeout.connect(tick)
+    preview.clicked.connect(start)
+    unlock.clicked.connect(do_unlock)
+    return holder
 
 
 def build(app):
@@ -46,6 +144,9 @@ def build(app):
                       ("shutdown", "general.shutdown")):
         inner.addLayout(switch_row(app.tr(text), bool(options.get(key)),
                                    lambda on, key=key: app.set_option(key, on)))
+        if key == "dim_screen":
+            inner.addWidget(label(app.tr("general.dim_hint"), "hint", wrap=True))
+            inner.addWidget(dim_controls(app, options))
     box.addWidget(card)
 
     # Telegram

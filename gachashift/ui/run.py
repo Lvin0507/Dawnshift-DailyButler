@@ -21,7 +21,7 @@ def build(app):
     card, inner = panel(spacing=6)
     inner.addWidget(label(app.tr("run.all"), "h2"))
     inner.addWidget(label(app.tr("run.all_explain"), "hint", wrap=True))
-    run_all = button(app.tr("run.all"), "primary", lambda: app.start_run("-m gachashift --no-shutdown"))
+    run_all = button(app.tr("run.all"), "primary", lambda: app.start_run("--no-shutdown"))
     run_all.setEnabled(not busy)
     row = QHBoxLayout()
     row.addWidget(run_all)
@@ -36,7 +36,7 @@ def build(app):
     short = SHORT_NAMES.get(app.lang, SHORT_NAMES["en"])
     picker = Choice([(g.id, short[g.id]) for g in GAMES], app.test_game)
     one = button(app.tr("test.run", game=short[app.test_game]), None,
-                 lambda: app.start_run(f"-m gachashift --only {app.test_game}"))
+                 lambda: app.start_run("--only", app.test_game))
     one.setEnabled(not busy)
 
     def pick(gid):

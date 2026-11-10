@@ -18,7 +18,8 @@ DEFAULT_CONFIG = {
     "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
     "options": {
         "mute": True,            # mute while running, restore afterwards
-        "dim_screen": False,     # lowest brightness while running, restore afterwards
+        "dim_screen": False,     # darken the screen during the scheduled run, restore afterwards
+        "dim_level": 30,         # screen brightness (%) while darkened
         "shutdown": True,        # shut the PC down when everything is done
     },
     "appearance": {

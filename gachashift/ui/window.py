@@ -16,8 +16,9 @@ from ..config import app_dir, load_config, save_config
 from ..games import GAMES
 from ..i18n import t
 from ..runner import running_file
-from ..system import log_size, read_since, stop_file
-from ..winutil import missing_items, plain_name, process_finished, scheduled_time, start_elevated
+from ..system import gamma_marker, log_size, read_since, restore_gamma, stop_file
+from ..winutil import (missing_items, plain_name, process_finished, scheduled_time, self_command,
+                       start_elevated)
 from . import appearance, games, general, history, home, run, schedule, theme
 from .widgets import button, label, restyle, shadowed
 
@@ -57,6 +58,11 @@ class MainWindow(QWidget):
         self.stopping = False
         self.run_timer = QTimer(self)
         self.run_timer.timeout.connect(self.poll_run)
+        if gamma_marker().exists() and self.running_info() is None:
+            try:
+                restore_gamma()  # an earlier run ended without putting the screen back
+            except Exception:
+                pass
         self.setWindowTitle("Gachashift")
         self.resize(1000, 700)
         self.setMinimumSize(860, 560)
@@ -233,14 +239,15 @@ class MainWindow(QWidget):
     def run_busy(self):
         return self.run_handle is not None or self.running_info() is not None
 
-    def start_run(self, args):
+    def start_run(self, *options):
         if self.cfg != self.saved_cfg:
             self.run_status.setText(self.tr("test.unsaved"))
             return
         # the run writes everything it prints to today's log; the app shows that file as it grows
         self.run_log = str(app_dir() / "logs" / f"gachashift_{datetime.date.today():%Y-%m-%d}.log")
         self.run_start_offset = self.run_offset = log_size(self.run_log)
-        handle = start_elevated(args)
+        program, arguments = self_command(*options)
+        handle = start_elevated(arguments, program)
         if not handle:
             self.run_status.setText(self.tr("test.denied"))
             return

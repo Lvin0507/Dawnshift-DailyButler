@@ -46,10 +46,11 @@ def run_game(game_cls, game_cfg, lang, wait_reset=True):
         return rep
 
 
-def run_games(cfg, only, lang, opts, log):
+def run_games(cfg, only, lang, opts, log, dim=False):
     """Run every game that is enabled and due today (or just `only`) and return their reports."""
     reports = []
-    with QuietMode(mute=opts.get("mute", True), dim=opts.get("dim_screen", False)):
+    with QuietMode(mute=opts.get("mute", True), dim=dim,
+                   dim_level=opts.get("dim_level", 30) / 100):
         for game_cls in GAMES:
             gid = game_cls.id
             game_cfg = cfg["games"].get(gid, {})
@@ -104,7 +105,9 @@ def run_all(cfg=None, only=None, allow_shutdown=True, send=True, ask_first=False
             rep.note("note.locked")
             reports.append(rep)
         else:
-            reports, stopped = run_games(cfg, only, lang, opts, log)
+            # only the scheduled run darkens the screen; someone is watching any other run
+            reports, stopped = run_games(cfg, only, lang, opts, log,
+                                         dim=ask_first and opts.get("dim_screen", False))
     except StopRequested:  # stopped while waiting for the lock screen to clear
         stopped = True
         reports.append(stopped_report())

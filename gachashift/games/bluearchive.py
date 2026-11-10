@@ -9,7 +9,7 @@ import subprocess
 import time
 
 from .. import report as R
-from ..system import kill, kill_processes, launch_and_click, processes_in, ts
+from ..system import StopRequested, kill, kill_processes, launch_and_click, pause, processes_in, ts
 from .base import Game, minutes_since
 
 REG_KEY = r"Software\YostarJP\BlueArchive"
@@ -50,7 +50,7 @@ class BlueArchive(Game):
     reset = (9, 4)  # 04:00 JST
     required = ("baas_dir", "launcher_path")
 
-    def run(self, start_timeout=300, timeout=5400):
+    def run(self, start_timeout=300, timeout=3600):
         baas_dir = self.cfg["baas_dir"]
         baas_exe = self.cfg.get("baas_exe") or os.path.join(baas_dir, "BlueArchiveAutoScript.exe")
         launcher = self.cfg["launcher_path"]
@@ -76,16 +76,27 @@ class BlueArchive(Game):
             # its own console: redirecting its output crashes it on a cp932 system
             subprocess.Popen([baas_exe], cwd=baas_dir, creationflags=subprocess.CREATE_NEW_CONSOLE)
             while time.time() - start < timeout:
-                time.sleep(15)
+                pause(15)
                 procs = processes_in(baas_dir)
-                if any((p.info.get("name") or "").lower() == "pythonw.exe" for p in procs):
+                baas_running = any((p.info.get("name") or "").lower() == "pythonw.exe" for p in procs)
+                if baas_running:
                     saw_baas = True
+                elif saw_baas:
+                    # BAAS itself has exited; helpers it leaves behind (e.g. adb.exe)
+                    # are closed in the finally block below
+                    reason = "exited"
+                    break
                 if not procs:
                     reason = "exited" if saw_baas else "not_started"
                     break
                 if not saw_baas and time.time() - start > start_timeout:
                     reason = "not_started"
                     break
+        except StopRequested as stop:
+            # BAAS keeps no task log, so all we can say is that it didn't finish
+            rep.add("baas", R.SKIPPED)
+            stop.report = rep
+            raise
         finally:
             kill_processes(processes_in(baas_dir))
             kill([GAME_EXE, launcher_exe])

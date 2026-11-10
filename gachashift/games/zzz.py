@@ -11,8 +11,8 @@ import subprocess
 import time
 
 from .. import report as R
-from ..system import (kill, kill_processes, launch_and_click, log_size, process_running,
-                      processes_in, read_since, restart_steam_if_running, ts)
+from ..system import (StopRequested, kill, kill_processes, launch_and_click, log_size, pause,
+                      process_running, processes_in, read_since, restart_steam_if_running, ts)
 from .base import Game, minutes_since
 
 GAME_EXE = "ZenlessZoneZero.exe"
@@ -20,7 +20,7 @@ SERVER_UTC = {"asia": 8, "america": -5, "europe": 1}
 LINE = re.compile(r"指令\[ (.+?) \] (?:节点 .*?返回状态 (.*)|执行成功 返回状态 (.*)|执行失败 返回状态 (.*))$")
 
 
-def parse_od_log(text, rep, minutes):
+def parse_od_log(text, rep, minutes, stopped=False):
     """OneDragon logs every operation as 指令[ name ]. The apps of the one-dragon group start
     right after a line from 指令[ 执行应用组 ... ]; anything inside an app (Return to World,
     Teleport, ...) is a sub-step and is ignored. Disabled apps are not reported."""
@@ -50,7 +50,11 @@ def parse_od_log(text, rep, minutes):
         rep.note("note.no_records")
         return rep
     for app, (status, detail) in results.items():
+        if stopped and status == R.WARN:
+            status = R.SKIPPED  # the app that was running when the user stopped
         rep.add(app, status, detail)
+    if stopped:
+        return rep
     if overall and overall[0] == "ok":
         rep.note("note.finished", minutes=minutes)
     elif overall:
@@ -74,10 +78,10 @@ class ZenlessZoneZero(Game):
             lambda: os.startfile(f"steam://rungameid/{self.cfg['steam_appid']}"),
             self.cfg["launcher_exe"], self.cfg["start_button"], GAME_EXE, wait_after=60)
 
-    def run(self, timeout=7200):
+    def run(self, timeout=3600):
         od_dir = self.cfg["od_dir"]
-        # The runtime launcher starts OneDragon without pulling code or reinstalling packages,
-        # so an unattended run can't stop at an update or driver-install prompt
+        # The runtime launcher (in some OneDragon builds) starts without pulling code or
+        # reinstalling packages, so an unattended run can't stop at an update prompt
         runtime = os.path.join(od_dir, "OneDragon-RuntimeLauncher.exe")
         od_exe = runtime if os.path.exists(runtime) else os.path.join(od_dir, "OneDragon-Launcher.exe")
         log = os.path.join(od_dir, ".log", "log.txt")
@@ -85,6 +89,7 @@ class ZenlessZoneZero(Game):
         offset = log_size(log)
         rep = self.new_report()
         start, reason, saw_od, saw_game, game_gone = time.time(), "timeout", False, False, 0
+        stop = None
         try:
             if steam:
                 if not self._open_through_steam():
@@ -96,7 +101,7 @@ class ZenlessZoneZero(Game):
             subprocess.Popen([od_exe, "-o", "-c"], cwd=od_dir,
                              creationflags=subprocess.CREATE_NEW_CONSOLE)
             while time.time() - start < timeout:
-                time.sleep(15)
+                pause(15)
                 procs = processes_in(od_dir)
                 saw_od = saw_od or bool(procs)
                 if process_running(GAME_EXE):
@@ -109,12 +114,17 @@ class ZenlessZoneZero(Game):
                 if game_gone >= 2:  # -c closes the game at the end
                     reason = "game_closed"
                     break
+        except StopRequested as e:
+            stop, reason = e, "stopped"
         finally:
             kill_processes(processes_in(od_dir))
             kill([GAME_EXE, self.cfg.get("launcher_exe") if steam else None])
             time.sleep(3)
         print(f"[{ts()}] ZZZ ended: {reason}, OneDragon seen={saw_od}, game seen={saw_game}")
-        rep = parse_od_log(read_since(log, offset), rep, minutes_since(start))
+        rep = parse_od_log(read_since(log, offset), rep, minutes_since(start), stopped=bool(stop))
+        if stop:
+            stop.report = rep
+            raise stop
         if not rep.tasks:
             rep.note("note.no_done_marker", reason=f"{reason}, OneDragon seen={saw_od}")
         return rep

@@ -12,3 +12,7 @@ __pycache__/
 !config.example.json
 *.png
 *.jpg
+
+# Files a run creates while it is going on
+running.json
+stop.request

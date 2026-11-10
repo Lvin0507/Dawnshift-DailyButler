@@ -21,6 +21,13 @@ DEFAULT_CONFIG = {
         "dim_screen": False,     # lowest brightness while running, restore afterwards
         "shutdown": True,        # shut the PC down when everything is done
     },
+    "appearance": {
+        "accent": "#F4B860",
+        "background": "",        # an image on this PC, or empty for a plain background
+        "panel_opacity": 82,     # 30-100: how solid the panels are over the background
+        "game_images": {},       # game id -> image on this PC
+    },
+    "setup": {"test_run_done": False, "skip_telegram": False},
     "games": {
         "endfield": {"enabled": False, "days": ALL_DAYS,
                      "maaend_path": "", "log_dir": ""},

@@ -5,3 +5,4 @@ pycaw
 comtypes
 screen-brightness-control
 customtkinter
+PySide6-Essentials

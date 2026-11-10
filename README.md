@@ -1,6 +1,6 @@
 # Gachashift — Daily Butler
 
-Clears my game dailies before I wake up. Gachashift is a Windows program that runs five game-automation tools one after another at dawn, checks each tool's log to see what actually got done, sends a short report to Telegram and shuts the PC down.
+Clears my game dailies before I wake up. Gachashift is a Windows app that runs five game-automation tools one after another every morning, checks each tool's log to see what actually got done, sends a short report to Telegram and shuts the PC down.
 
 ## What it does
 
@@ -29,9 +29,6 @@ Recruitment: ✅ Done (x4)
 Base shifts: ✅ Done
 ...
 
-『🌊 Wuthering Waves』
-Weekly garden: ✅ Done (max)
-
 『📘 Blue Archive』
 BAAS dailies: ✅ Done
 ✅ Finished in 14 min
@@ -39,7 +36,6 @@ BAAS dailies: ✅ Done
 『⚡ Zenless Zone Zero』
 Daily check-in: ✅ Done
 Mail: ✅ Done
-Video store: ✅ Done
 ✅ Finished in 6 min
 ```
 
@@ -49,10 +45,11 @@ Gachashift doesn't play the games itself. For each game it opens the right tool,
 
 Around that, it handles the parts the tools leave to you: clicking launcher start buttons, waiting for a server's daily reset, restarting Steam with the right permissions, muting the PC (and optionally dimming the screen) while it runs, and putting everything back afterwards.
 
+If you are using the PC when the scheduled time comes, it asks first and gives you 60 seconds to skip. A run can be stopped from the app at any time: the game in progress closes its tool and game, sound and brightness are restored, the PC stays on, and the report lists what was finished before the stop.
+
 ## Requirements
 
 - Windows, Python 3.10 or newer
-- Run as Administrator (MAA's PC-client mode and several games require it)
 - A Telegram bot, if you want the report on your phone (optional)
 - The tools for your games, installed and working on their own first. Follow each tool's own documentation, then check these settings Gachashift relies on:
   - **MaaEnd**: "Launch Game (PC)" as the first task and "kill process" as the last
@@ -61,8 +58,8 @@ Around that, it handles the parts the tools leave to you: clicking launcher star
   - **BAAS**: "run on startup" enabled, "start emulator on startup" **disabled** (Gachashift opens the JP launcher and clicks スタート itself), "exit BAAS when done" selected
   - **OneDragon**: game path and account instance set; the apps you want enabled in the one-dragon list
 - For Steam games: Steam must sign in automatically to the account that owns the game
+- The PC must stay on and signed in overnight. Turning the screen off is fine; sleep and the lock screen are not, because no tool can see or click anything on the lock screen
 - Leave the PC alone during a run. BAAS and the launcher clicks use the real mouse, and moving it makes BAAS stop
-- Blue Archive is left in a 1280x720 window after a run (BAAS needs it); press Alt+Enter to go back to full screen
 
 ## Setup
 
@@ -70,68 +67,54 @@ Around that, it handles the parts the tools leave to you: clicking launcher star
    ```
    pip install -r requirements.txt
    ```
-2. Copy `config.example.json` to `config.json` and fill in your paths, enable your games and (optionally) add your Telegram bot token and chat id. If you used the old `pagent.py`, your `.env` is converted to `config.json` automatically the first time Gachashift runs.
-3. If a game needs a launcher click (Blue Archive, Steam ZZZ), open the launcher, run `python scripts\measure_click.py`, hover over the start button and press Enter. Put the printed numbers in that game's `start_button`.
-4. Test one game at a time (no Telegram, no shutdown, no weekday check):
-   ```
-   python -m gachashift --only zzz
-   ```
-   Use `endfield`, `arknights`, `wuthering`, `bluearchive` or `zzz`. Add `--lang zh` for a Chinese report.
-5. Run everything once, keeping the PC on afterwards:
-   ```
-   python -m gachashift --no-shutdown
-   ```
-6. Schedule it with Windows Task Scheduler:
-   - Program: your `python.exe`; Arguments: `-m gachashift`; Start in: this folder
-   - Tick "Run with highest privileges"
-   - Keep "Run only when user is logged on" (the games need a real desktop)
-   - Add a trigger at the time you want and allow it to wake the computer
+2. Double-click `Gachashift App.bat` to open the app (it edits `config.json` for you).
+3. **Home**: turn on the games you play.
+4. **Games**: for each game, fill in the paths with **Browse**, pick its weekdays, and use the link to the tool's own page if you still need to set the tool up. For Blue Archive and Steam ZZZ, open the game's launcher and press **Calibrate** next to the start button position.
+5. **General**: choose the languages, what happens while running (mute, dim, shut down), and your Telegram bot. **Send a test message** checks the bot right away.
+6. **Run**: use **Test one game** for each game first, then **Run everything now** once. Windows asks for admin rights, because the games need them.
+7. **Schedule**: pick a time and press **Save schedule**. This creates a Task Scheduler task that runs with highest privileges and never starts late after a missed time. If you made a task by hand before, delete it so the games don't run twice.
 
-To check a MaaEnd log without launching anything: `python -m gachashift --dry-run-endfield logs\go-service_<date>.log`.
+Past runs are under **History**.
 
-## Configuration
+### Command line
 
-Everything lives in `config.json` (git-ignored, because it holds your Telegram token).
+The app runs the same commands, so they also work on their own:
 
-| Setting | Meaning |
-|---|---|
-| `language`, `report_language` | `en` or `zh` |
-| `telegram` | `enabled`, `bot_token`, `chat_id` |
-| `options.mute` | Mute while running, restore afterwards |
-| `options.dim_screen` | Lowest brightness while running, restore afterwards (external monitors need DDC/CI) |
-| `options.shutdown` | Shut the PC down when done |
-| `games.<id>.enabled` | Run this game at all |
-| `games.<id>.days` | Weekdays to run, Monday = 0 (Wuthering Waves defaults to `[0]`) |
-| `games.<id>.wait_for_reset` | Blue Archive and ZZZ: wait for the server's daily reset if it is less than two hours away, so the run counts for the right day |
-| `games.wuthering.steam_client` | `true` for the Steam build; Steam is started with admin rights before ok-ww |
-| `games.zzz.client` | `official` (OneDragon opens the game) or `steam` (Gachashift opens it through Steam first) |
-| `games.zzz.server` | `asia`, `america` or `europe`, for the reset time |
+```
+python -m gachashift                   # the scheduled run (asks first if someone is at the PC)
+python -m gachashift --no-shutdown     # run everything now and keep the PC on
+python -m gachashift --only zzz        # one game: endfield, arknights, wuthering, bluearchive or zzz
+python -m gachashift --dry-run-endfield logs\go-service_<date>.log
+```
 
-To skip a whole morning, disable the task in Task Scheduler.
+Add `--lang zh` for a Chinese report.
 
 ## Logs
 
-- `logs/gachashift_<date>.log`: everything Gachashift printed during a run, kept for 14 days. Runs started by Task Scheduler have no visible console, so this is the first place to look when a report looks wrong.
+- `logs/gachashift_<date>.log`: everything Gachashift printed during a run, kept for 14 days. Scheduled runs have no visible console, so this is the first place to look when a report looks wrong. The app's **History** page shows the same files.
 - `logs/go-service_<date>.log`: archived MaaEnd logs, kept for 14 days (MaaEnd overwrites its own log on every launch).
 
 ## Known limitations
 
 - **Blue Archive's ✅ means BAAS finished, not that every daily mission is done.** BAAS doesn't write its task log to a file, so Gachashift only knows that BAAS ran and exited normally. Which missions get done depends on the tasks enabled in BAAS.
+- **OneDragon updates itself on every start**, and an update that needs a driver installed waits for a click. Open OneDragon by hand once after each game update, so the morning run doesn't stop at that window.
 - **Wuthering Waves only runs the weekly garden task** for now.
 - **Windows only**, because every tool is Windows-only.
 
 ## Project layout
 
 ```
-gachashift/            The program
+gachashift/           The program
   __main__.py         Command line (python -m gachashift)
-  runner.py           Picks today's games, waits for resets, quiet mode, report, shutdown
+  app.py              The desktop app (python -m gachashift.app)
+  runner.py           Picks today's games, waits for resets, stop requests, report, shutdown
+  prompt.py           The "about to start" window for scheduled runs
   config.py           config.json, defaults, and migration from the old .env
-  system.py           Processes, logs, launcher clicks, Steam, mute and brightness
+  system.py           Processes, logs, launcher clicks, Steam, lock screen, mute and brightness
   report.py           Structured results and the Telegram message
   i18n.py             All English and Chinese text
   games/              One module per game
-scripts/              Helpers (measure_click.py) and old test scripts
+Gachashift App.bat    Opens the app
 config.example.json   Template for config.json
 logs/                 Run logs and archived MaaEnd logs (git-ignored)
 ```
@@ -151,7 +134,7 @@ Problems I hit while building this, and what fixed them:
 - **Secrets started out hard-coded.** Everything sensitive now lives in a git-ignored `config.json`, and GitHub push protection blocks accidental key commits.
 - **Not every game can be automated safely.** NIKKE's PC client ignores all synthetic input, and running it on a real phone through ADB earned the account a one-hour ban. I dropped it instead of trying to evade the anti-cheat.
 - **The script needs a 1280x720 window, but I play full screen.** Blue Archive (Unity) keeps its window size in the registry, so Gachashift writes a 1280x720 window before launching. Restoring full screen afterwards turned out not to be possible from the registry: the game's full-screen toggle isn't stored in Unity's standard settings, and an earlier save-and-restore approach also broke once an interrupted run left the window values behind. So Gachashift only sets the window it needs, and I press Alt+Enter when I play.
-- **"Wait for the process to exit" waited for the wrong process.** BAAS's `.exe` is only a launcher that starts the real script and quits. Gachashift tracks every process running from inside the tool's folder, matching on the path so it never touches its own `python.exe`. The same approach now covers ok-ww and OneDragon.
+- **"Wait for the process to exit" waited for the wrong process.** BAAS's `.exe` is only a launcher that starts the real script and quits. Gachashift tracks the processes running from inside each tool's folder, matching on the path so it never touches its own `python.exe`. Later BAAS started leaving `adb.exe` running after it quit, so for BAAS the run now ends when its main `pythonw.exe` exits, and the leftovers are closed.
 - **Redirecting a tool's output crashed it.** BAAS's launcher prints a banner with block characters. Sent to a file, Python fell back to the system's Japanese code page (cp932), which can't encode them, and the launcher died before starting BAAS. Giving it its own console window fixed it.
 - **The JP client can't be started directly.** Running `BlueArchive.exe` by itself crashes at login, and the official launcher has no auto-start option. Gachashift opens the launcher, finds its window by process, and clicks スタート (as a fraction of the window size, so it survives DPI scaling) until the game process appears.
 - **A real-mouse click can land on the wrong window.** Windows sometimes refuses to bring a window to the front, and one morning a click meant for Blue Archive's launcher opened Endfield's instead. Gachashift now checks that the launcher really is the foreground window before clicking, and skips the click if it isn't.
@@ -159,11 +142,13 @@ Problems I hit while building this, and what fixed them:
 - **A UAC prompt nobody can click.** ZZZ needs admin rights. Child processes inherit their parent's privileges, so when the elevated script started Steam, the game launched silently; but if Steam was already running as a normal user (it starts at login), launching the game raised a UAC prompt. UAC prompts run on a separate secure desktop that scripts deliberately can't interact with, so the run just stalled. Gachashift now closes an already-running Steam with `steam://exit` and starts it again itself, so the whole chain inherits admin rights. Wuthering Waves on Steam needed the same treatment: without Steam ready, the game closed itself a minute after ok-ww started it.
 - **A tool that only exits on success.** ok-ww's `-e` flag exits after a successful run but leaves the app open after a task exception, still moving the mouse in the background, which then interfered with the next game. Gachashift now watches the tool's log for its own completion and failure lines and always closes the tool afterwards, whatever the outcome.
 - **A scheduled run leaves no trace.** Task Scheduler runs have no visible console, so the first time ZZZ silently did nothing there was no way to tell why. Everything Gachashift prints now also goes to a dated log file.
+- **The lock screen blinds every tool.** Testing wake-from-sleep, Windows woke up on the lock screen, where screen capture fails, so MaaEnd sat there unable to start the game. Waking without a password would have fixed it at the cost of security, so the PC stays on with the screen off instead, and Gachashift checks for the lock screen first: if it is up, the report says so rather than hanging for hours.
+- **A run that starts while you're at the PC.** The first time the schedule fired while I was using the computer, games and tools kept opening and had to be closed one by one. Scheduled runs now ask first if the mouse or keyboard was used in the last two minutes, and every wait in a run checks for a stop request, so a stop takes effect within a second and still cleans up after itself.
 
 ## Roadmap
 
-- A desktop app (CustomTkinter) to pick games, fill in paths, calibrate launcher buttons, run a test and set the schedule, without editing `config.json`
 - A packaged `.exe`, so Python isn't needed
+- Genshin Impact via [BetterGI](https://github.com/babalae/better-genshin-impact)
 
 ## Built on
 

@@ -10,9 +10,56 @@ from ctypes import wintypes
 
 import psutil
 
+from .config import app_dir
+
 
 def ts():
     return datetime.datetime.now().strftime("%H:%M:%S")
+
+
+# ---------- stopping a run ----------
+class StopRequested(Exception):
+    """Raised inside a run when the user asked Gachashift to stop."""
+
+
+def stop_file():
+    """Creating this file (from the App or the Stop shortcut) asks a running Gachashift to stop."""
+    return app_dir() / "stop.request"
+
+
+def stop_requested():
+    return stop_file().exists()
+
+
+def clear_stop():
+    try:
+        stop_file().unlink()
+    except FileNotFoundError:
+        pass
+
+
+def pause(seconds):
+    """Sleep, but give up at once with StopRequested if the user asked to stop. Every wait in a
+    run goes through here, so a stop takes effect within a second wherever the run is."""
+    end = time.time() + seconds
+    while True:
+        if stop_requested():
+            raise StopRequested()
+        left = end - time.time()
+        if left <= 0:
+            return
+        time.sleep(min(1.0, left))
+
+
+def seconds_since_input():
+    """How long ago the keyboard or mouse was last used in this session."""
+    class LASTINPUTINFO(ctypes.Structure):
+        _fields_ = [("cbSize", wintypes.UINT), ("dwTime", wintypes.DWORD)]
+
+    info = LASTINPUTINFO()
+    info.cbSize = ctypes.sizeof(info)
+    ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info))
+    return (ctypes.windll.kernel32.GetTickCount() - info.dwTime) / 1000
 
 
 # ---------- processes ----------
@@ -144,10 +191,10 @@ def launch_and_click(open_launcher, launcher_exe, button, game_exe, wait_after=3
     open_launcher()
     start = time.time()
     while time.time() - start < timeout:
-        time.sleep(10)
+        pause(10)
         if process_running(game_exe):
             print(f"[{ts()}] game started, waiting for it to load...")
-            time.sleep(wait_after)
+            pause(wait_after)
             return True
         hwnd = main_window_of(launcher_exe)
         if hwnd:
@@ -155,28 +202,6 @@ def launch_and_click(open_launcher, launcher_exe, button, game_exe, wait_after=3
             click_in_window(hwnd, *button)
     return False
 
-def restart_steam_if_running():
-    """A Steam that is already running without admin rights makes admin-only games ask for
-    elevation (a UAC prompt no script can click). Close it gracefully so that our elevated
-    process starts Steam again and everything it launches inherits admin rights."""
-    if not process_running("steam.exe"):
-        return
-    print(f"[{ts()}] Steam is already running; restarting it with admin rights")
-    os.startfile("steam://exit")  # graceful exit
-    for _ in range(30):
-        time.sleep(2)
-        if not process_running("steam.exe"):
-            return
-    kill(["steam.exe"])
-    time.sleep(3)
-
-
-def start_steam_elevated(wait=45):
-    """Make sure Steam is running with our admin rights and signed in before a tool
-    launches a Steam game directly (Steam's DRM hands the launch back to Steam)."""
-    restart_steam_if_running()
-    os.startfile("steam://open/main")
-    time.sleep(wait)
 
 def wait_for_reset(utc_offset_hours, reset_hour=4, margin_minutes=5, max_wait_hours=2, on_wait=None):
     """Wait until just after a server's daily reset (if it is due within max_wait_hours),
@@ -188,7 +213,7 @@ def wait_for_reset(utc_offset_hours, reset_hour=4, margin_minutes=5, max_wait_ho
     if 0 < wait <= max_wait_hours * 3600:
         if on_wait:
             on_wait(round(wait / 60))
-        time.sleep(wait)
+        pause(wait)
         return round(wait / 60)
     return 0
 
@@ -250,6 +275,33 @@ def shutdown(delay=5):
     time.sleep(delay)
     subprocess.run(["shutdown", "/s", "/t", "0"])
 
+
+# ---------- Steam ----------
+def restart_steam_if_running():
+    """A Steam that is already running without admin rights makes admin-only games ask for
+    elevation (a UAC prompt no script can click). Close it gracefully so that our elevated
+    process starts Steam again and everything it launches inherits admin rights."""
+    if not process_running("steam.exe"):
+        return
+    print(f"[{ts()}] Steam is already running; restarting it with admin rights")
+    os.startfile("steam://exit")  # graceful exit
+    for _ in range(30):
+        pause(2)
+        if not process_running("steam.exe"):
+            return
+    kill(["steam.exe"])
+    pause(3)
+
+
+def start_steam_elevated(wait=45):
+    """Make sure Steam is running with our admin rights and signed in before a tool
+    launches a Steam game directly (Steam's DRM hands the launch back to Steam)."""
+    restart_steam_if_running()
+    os.startfile("steam://open/main")
+    pause(wait)
+
+
+# ---------- lock screen ----------
 def session_locked():
     """True while the lock or sign-in screen is up. Screen capture and real-mouse clicks don't
     work there, so no tool can do anything until someone signs in."""
@@ -257,9 +309,10 @@ def session_locked():
 
 
 def wait_for_unlock(max_wait=120):
-    """Give Windows a moment after waking; return False if it is still on the lock screen."""
+    """Give Windows a moment in case it is just waking up; return False if it is still on the
+    lock screen after that."""
     waited = 0
     while session_locked() and waited < max_wait:
-        time.sleep(10)
+        pause(10)
         waited += 10
     return not session_locked()

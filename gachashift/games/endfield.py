@@ -10,7 +10,7 @@ import time
 
 from .. import report as R
 from ..config import app_dir
-from ..system import kill, process_running, read_since, ts
+from ..system import StopRequested, kill, pause, process_running, read_since, ts
 from .base import Game
 
 TASKS = ["LaunchGamePC", "StashBackpackMain", "DijiangRewards", "OutpostTradingSchedule",
@@ -24,7 +24,7 @@ ALIASES = {"SeizeDeliveryJobsMain": "SeizeDeliveryJobs",
 DELIVERY_TARGET = 3
 
 
-def parse_endfield_log(text, rep):
+def parse_endfield_log(text, rep, interrupted=False):
     """Fill `rep` from MaaEnd's go-service.log (one JSON object per line).
     A run starts at "Checking aspect ratio before task execution"; any "Task failed" line
     marks it failed (some failures are only logged at debug level)."""
@@ -87,6 +87,11 @@ def parse_endfield_log(text, rep):
     for key in runs:
         if key not in TASKS:
             rep.add(key, R.FAIL if fails.get(key) else R.OK, new=True)
+    if interrupted and current:
+        # the task that was running when the user stopped didn't get to finish
+        for task in rep.tasks:
+            if task.key == current and task.status != R.FAIL:
+                task.status, task.detail = R.SKIPPED, ""
     return rep
 
 
@@ -111,20 +116,29 @@ class Endfield(Game):
     id = "endfield"
     required = ("maaend_path", "log_dir")
 
-    def run(self, timeout=7200):
+    def run(self, timeout=5400):
         path = self.cfg["maaend_path"]
-        print(f"[{ts()}] starting {path}")
-        subprocess.Popen([path], cwd=os.path.dirname(path))
-        time.sleep(15)
-        start = time.time()
         log = os.path.join(self.cfg["log_dir"], "go-service.log")
-        while process_running("MaaEnd.exe") and time.time() - start < timeout:
-            time.sleep(10)
-            # MaaEnd stays open after its launch step fails; don't wait out the whole timeout
-            if "failed to run launcher pipeline" in read_since(log, 0):
-                print(f"[{ts()}] MaaEnd could not start the game; stopping it")
-                break
-        kill(["MaaEnd.exe", "Endfield.exe", "Gryphlink.exe"])
-        time.sleep(5)
-        archive_log(self.cfg["log_dir"])
-        return parse_endfield_log(read_since(log, 0), self.new_report())
+        stop = None
+        try:
+            print(f"[{ts()}] starting {path}")
+            subprocess.Popen([path], cwd=os.path.dirname(path))
+            pause(15)
+            start = time.time()
+            while process_running("MaaEnd.exe") and time.time() - start < timeout:
+                pause(10)
+                # MaaEnd stays open after its launch step fails; don't wait out the whole timeout
+                if "failed to run launcher pipeline" in read_since(log, 0):
+                    print(f"[{ts()}] MaaEnd could not start the game; stopping it")
+                    break
+        except StopRequested as e:
+            stop = e
+        finally:
+            kill(["MaaEnd.exe", "Endfield.exe", "Gryphlink.exe"])
+            time.sleep(5)
+            archive_log(self.cfg["log_dir"])
+        rep = parse_endfield_log(read_since(log, 0), self.new_report(), interrupted=bool(stop))
+        if stop:
+            stop.report = rep  # show what was finished before the stop
+            raise stop
+        return rep

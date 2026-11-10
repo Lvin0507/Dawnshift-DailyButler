@@ -1,7 +1,7 @@
-"""Dawnshift desktop app: turn games on, fill in their paths and options, save to config.json.
+"""Gachashift desktop app: turn games on, fill in their paths and options, save to config.json.
 
-Run with:  python -m dawnshift.app
-The app only edits settings; the morning run itself is still `python -m dawnshift`.
+Run with:  python -m gachashift.app
+The app only edits settings; the morning run itself is still `python -m gachashift`.
 """
 
 import copy
@@ -155,7 +155,7 @@ def launcher_of(gid, game_cfg):
     return game_cfg.get("launcher_exe") or "launcher"
 
 
-TASK_NAME = "Dawnshift"
+TASK_NAME = "Gachashift"
 
 
 def task_xml(hour, minute):
@@ -166,7 +166,7 @@ def task_xml(hour, minute):
     user = f"{os.environ.get('USERDOMAIN', '')}\\{os.environ.get('USERNAME', '')}"
     return f"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo><Description>Dawnshift morning run</Description></RegistrationInfo>
+  <RegistrationInfo><Description>Gachashift morning run</Description></RegistrationInfo>
   <Triggers>
     <CalendarTrigger>
       <StartBoundary>{start}</StartBoundary>
@@ -193,7 +193,7 @@ def task_xml(hour, minute):
   <Actions Context="Author">
     <Exec>
       <Command>{escape(sys.executable)}</Command>
-      <Arguments>-m dawnshift</Arguments>
+      <Arguments>-m gachashift</Arguments>
       <WorkingDirectory>{escape(str(app_dir()))}</WorkingDirectory>
     </Exec>
   </Actions>
@@ -215,7 +215,7 @@ def run_schtasks_elevated(args, timeout_ms=20000):
 
 
 def scheduled_time():
-    """'HH:MM' of the existing Dawnshift task, or None if there isn't one."""
+    """'HH:MM' of the existing Gachashift task, or None if there isn't one."""
     try:
         result = subprocess.run(["schtasks", "/query", "/tn", TASK_NAME, "/xml"], capture_output=True,
                                 text=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), timeout=15)
@@ -225,7 +225,7 @@ def scheduled_time():
     return match.group(1) if result.returncode == 0 and match else None
 
 
-class DawnshiftApp(ctk.CTk):
+class GachashiftApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         ctk.set_appearance_mode("dark")
@@ -264,7 +264,7 @@ class DawnshiftApp(ctk.CTk):
         """(Re)build the whole window, e.g. after the app language changes."""
         for child in self.winfo_children():
             child.destroy()
-        self.title("Dawnshift")
+        self.title("Gachashift")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -275,7 +275,7 @@ class DawnshiftApp(ctk.CTk):
         horizon = ctk.CTkCanvas(side, width=10, height=6, highlightthickness=0, bg=PANEL)
         horizon.pack(fill="x")
         horizon.bind("<Configure>", lambda e: self.draw_horizon(horizon, e.width))
-        ctk.CTkLabel(side, text="Dawnshift", font=self.font(22, "bold"),
+        ctk.CTkLabel(side, text="Gachashift", font=self.font(22, "bold"),
                      text_color=TEXT).pack(anchor="w", padx=22, pady=(22, 28))
         self.nav_buttons = {}
         for page in ("home", "games", "test", "schedule", "history", "general"):
@@ -575,9 +575,9 @@ class DawnshiftApp(ctk.CTk):
             self.run_status.configure(text=self.tr("test.unsaved"), text_color=FAIL_COLOR)
             return
         # The run writes everything it prints to today's log; the app shows that file as it grows
-        self.run_log = str(app_dir() / "logs" / f"dawnshift_{datetime.date.today():%Y-%m-%d}.log")
+        self.run_log = str(app_dir() / "logs" / f"gachashift_{datetime.date.today():%Y-%m-%d}.log")
         self.run_start_offset = self.run_offset = log_size(self.run_log)
-        handle = start_elevated(f"-m dawnshift --only {self.test_game}")
+        handle = start_elevated(f"-m gachashift --only {self.test_game}")
         if not handle:
             self.run_status.configure(text=self.tr("test.denied"), text_color=FAIL_COLOR)
             return
@@ -637,7 +637,7 @@ class DawnshiftApp(ctk.CTk):
                               wraplength=580, justify="left")
 
         def save_schedule():
-            path = os.path.join(tempfile.gettempdir(), "dawnshift_task.xml")
+            path = os.path.join(tempfile.gettempdir(), "gachashift_task.xml")
             with open(path, "w", encoding="utf-16") as f:
                 f.write(task_xml(int(hours.get()), int(minutes.get())))
             ok = run_schtasks_elevated(f'/create /tn {TASK_NAME} /xml "{path}" /f')
@@ -670,12 +670,12 @@ class DawnshiftApp(ctk.CTk):
     def page_history(self):
         self.heading(self.tr("nav.history"))
         folder = app_dir() / "logs"
-        runs = sorted(folder.glob("dawnshift_*.log"), reverse=True) if folder.exists() else []
+        runs = sorted(folder.glob("gachashift_*.log"), reverse=True) if folder.exists() else []
         if not runs:
             ctk.CTkLabel(self.content, text=self.tr("history.empty"), font=self.font(14),
                          text_color=MUTED).pack(anchor="w")
             return
-        dates = {path.stem.replace("dawnshift_", ""): path for path in runs}
+        dates = {path.stem.replace("gachashift_", ""): path for path in runs}
         output = ctk.CTkTextbox(self.content, height=420, font=self.font(13), fg_color=PANEL,
                                 text_color=TEXT, border_color=LINE, border_width=1)
 
@@ -886,7 +886,7 @@ class DawnshiftApp(ctk.CTk):
 
 
 def main():
-    DawnshiftApp().mainloop()
+    GachashiftApp().mainloop()
 
 
 if __name__ == "__main__":

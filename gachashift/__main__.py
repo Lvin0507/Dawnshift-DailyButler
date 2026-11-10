@@ -1,9 +1,9 @@
 """Command line entry point:
 
-    python -m dawnshift                      # normal run (uses config.json)
-    python -m dawnshift --no-shutdown        # full run, keep the PC on
-    python -m dawnshift --only zzz           # one game, no Telegram, no shutdown
-    python -m dawnshift --dry-run-endfield logs\\go-service_....log
+    python -m gachashift                      # normal run (uses config.json)
+    python -m gachashift --no-shutdown        # full run, keep the PC on
+    python -m gachashift --only zzz           # one game, no Telegram, no shutdown
+    python -m gachashift --dry-run-endfield logs\\go-service_....log
 """
 
 import argparse
@@ -37,11 +37,11 @@ class _Tee:
 def start_run_log(keep_days=14):
     folder = app_dir() / "logs"
     folder.mkdir(exist_ok=True)
-    path = folder / f"dawnshift_{datetime.date.today():%Y-%m-%d}.log"
+    path = folder / f"gachashift_{datetime.date.today():%Y-%m-%d}.log"
     sys.stdout = _Tee(sys.stdout, path)
     sys.stderr = _Tee(sys.stderr, path)
     cutoff = time.time() - keep_days * 86400
-    for old in folder.glob("dawnshift_*.log"):
+    for old in folder.glob("gachashift_*.log"):
         if old.stat().st_mtime < cutoff:
             old.unlink()
 
@@ -53,7 +53,7 @@ from .system import read_since
 
 
 def main():
-    p = argparse.ArgumentParser(prog="dawnshift", description="Dawnshift - daily game butler")
+    p = argparse.ArgumentParser(prog="gachashift", description="Gachashift - daily game butler")
     p.add_argument("--no-shutdown", action="store_true", help="do not shut down afterwards")
     p.add_argument("--only", choices=sorted(GAMES_BY_ID), help="run one game; no Telegram, no shutdown")
     p.add_argument("--dry-run-endfield", metavar="LOG", help="parse a MaaEnd log and print the report")

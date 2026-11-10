@@ -1,5 +1,5 @@
 """Runs the enabled games in order, collects their reports and sends them.
-Used by both the command line (python -m dawnshift) and the App."""
+Used by both the command line (python -m gachashift) and the App."""
 
 import datetime
 

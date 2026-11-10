@@ -1,5 +1,5 @@
 """
-pagent.py - Dawnshift, full-Python version (no LLM).
+pagent.py - Gachashift, full-Python version (no LLM).
 
 Runs Arknights: Endfield (MaaEnd), Arknights (MAA, PC client), Wuthering Waves (ok-ww)
 and Blue Archive JP (BAAS, PC client),
@@ -794,7 +794,7 @@ def safe_section(name, func):
 # 6. Main
 # ==========================================
 def parse_args():
-    p = argparse.ArgumentParser(description="Dawnshift - daily game butler (full-Python version)")
+    p = argparse.ArgumentParser(description="Gachashift - daily game butler (full-Python version)")
     p.add_argument("--no-shutdown", action="store_true", help="do not shut down after the run")
     p.add_argument("--dry-run", action="store_true",
                    help="launch nothing; parse an existing MaaEnd log and print the report")
@@ -821,7 +821,7 @@ def main():
         return
 
     mute_volume()
-    print("=== Dawnshift 启动 (pagent) ===")
+    print("=== Gachashift 启动 (pagent) ===")
 
     sections = [safe_section("终末地", run_endfield)]
 
@@ -850,7 +850,7 @@ def main():
     report = "\n\n".join(sections)
     print("\n" + report + "\n")
 
-    title = f"🌅 Dawnshift 战报 ({datetime.datetime.now().strftime('%m-%d')})"
+    title = f"🌅 Gachashift 战报 ({datetime.datetime.now().strftime('%m-%d')})"
     send_tg_msg(f"<b>{title}</b>\n\n{html.escape(report)}")
 
     if not args.no_shutdown:

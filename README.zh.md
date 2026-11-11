@@ -70,7 +70,7 @@ Gachashift 本身不玩游戏。每款游戏它都会打开对应的工具，等
 ## 需求
 
 - Windows
-- 想在手机收到战报的话，需要一个 Telegram bot（可选）
+- 想在手机收到战报的话，需要一个 Telegram bot 或 Discord webhook（可选）
 - 你玩的游戏对应的工具，先装好并确认它自己能跑。依照各工具自己的说明设置后，再确认以下几项 Gachashift 依赖的设置：
   - **MaaEnd**：第一个任务是“启动游戏（PC）”，最后一个是“结束进程”
   - **MAA**：连接设置为 PC 客户端，填好“启动游戏”的路径，开启“启动后直接运行”
@@ -89,14 +89,14 @@ Gachashift 本身不玩游戏。每款游戏它都会打开对应的工具，等
    ```
 2. 双击 `Gachashift App.bat`。
 
-接下来交给 App。首页会显示一份简短的设置清单，每一步都有按钮：打开你玩的游戏、告诉 Gachashift 每个工具在哪里、做一次测试运行、连接 Telegram（可选）、设定每天几点运行。每个设置下面都有一行说明，每款游戏的页面也链接到该工具自己的文档。五个步骤都完成后，清单就会收起。
+接下来交给 App。首页会显示一份简短的设置清单，每一步都有按钮：打开你玩的游戏、告诉 Gachashift 每个工具在哪里、做一次测试运行、连接 Telegram 或 Discord（可选）、设定每天几点运行。每个设置下面都有一行说明，每款游戏的页面也链接到该工具自己的文档。五个步骤都完成后，清单就会收起。
 
 其他页面：
 
 - **运行**：立即全部运行，或测试单款游戏；输出会即时显示
 - **排程**：每天运行的任务计划程序任务（使用最高权限，错过时间不会补跑）
 - **历史**：过去的运行记录，战报在最后面
-- **通用设置**：语言、运行期间的静音／调暗／关机、Telegram 与测试消息
+- **通用设置**：语言、运行期间的静音／调暗屏幕／关机、Telegram 和 Discord 与测试消息、检查更新
 - **外观**：背景图片、面板不透明度、强调色，以及每款游戏的图片。图片是你电脑上的文件，只留在你的电脑，不会上传也不会被打包
 
 运行期间，每一页都会出现 **停止** 按钮。
@@ -137,10 +137,15 @@ gachashift/           程序本体
   prompt.py           排程运行前的“即将开始”视窗
   config.py           config.json、默认值，以及从旧版 .env 迁移
   system.py           进程、日志、启动器点击、Steam、锁定画面、静音与亮度
-  report.py           结构化的结果与 Telegram 消息
+  report.py           结构化的结果、Telegram 与 Discord 消息
+  updates.py          向 GitHub 查询有没有新版本
   i18n.py             所有中英文文字
   games/              每款游戏一个模块
-Gachashift App.bat    打开 App
+Gachashift.py         Gachashift.exe 的入口（打开 App，或用 "run" 执行运行）
+Gachashift App.bat    从源码打开 App
+build.py              用 PyInstaller 打包出 dist/Gachashift 和 zip
+assets/               App 图标
+.github/workflows/    推送版本 tag 时自动打包并发布 Release
 config.example.json   config.json 的范本
 logs/                 运行日志与存档的 MaaEnd 日志（不纳入 git）
 ```
@@ -174,6 +179,10 @@ logs/                 运行日志与存档的 MaaEnd 日志（不纳入 git）
 ## 未来计划
 
 - 原神（通过 [BetterGI](https://github.com/babalae/better-genshin-impact)）
+
+## 发布新版
+
+在 `gachashift/__init__.py` 改好版本号，commit 并 push，再推送一个对应的 tag，例如 `v1.0.1`。GitHub Actions 会在 Windows 上打包 `Gachashift.exe`，并发布附上 zip 的 Release；如果 tag 和版本号对不上，它会停下来不发布。
 
 ## 基于以下项目
 

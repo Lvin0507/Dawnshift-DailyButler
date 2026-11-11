@@ -69,8 +69,8 @@ If you are using the PC when the scheduled time comes, it asks first and gives y
 
 ## Requirements
 
-- Windows, Python 3.10 or newer
-- A Telegram bot, if you want the report on your phone (optional)
+- Windows
+- A Telegram bot or a Discord webhook, if you want the report on your phone (optional)
 - The tools for your games, installed and working on their own first. Follow each tool's own documentation, then check these settings Gachashift relies on:
   - **MaaEnd**: "Launch Game (PC)" as the first task and "kill process" as the last
   - **MAA**: connection set to PC client, "start game" path set, "run on startup" enabled
@@ -81,7 +81,7 @@ If you are using the PC when the scheduled time comes, it asks first and gives y
 - The PC must stay on and signed in overnight. Turning the screen off is fine; sleep and the lock screen are not, because no tool can see or click anything on the lock screen
 - Leave the PC alone during a run. BAAS and the launcher clicks use the real mouse, and moving it makes BAAS stop
 
-## Setup
+## Run from source
 
 1. Install Python 3.10 or newer (**64-bit**; the app's interface library has no 32-bit version), then the dependencies:
    ```
@@ -89,14 +89,14 @@ If you are using the PC when the scheduled time comes, it asks first and gives y
    ```
 2. Double-click `Gachashift App.bat`.
 
-The app takes it from there. Home shows a short setup checklist with a button for each step: turn on your games, tell Gachashift where each tool is, do one test run, connect Telegram (optional), and choose when to run. Every setting has a one-line hint under it, and each game's page links to its tool's own documentation. When all five steps are done, the checklist goes away.
+The app takes it from there. Home shows a short setup checklist with a button for each step: turn on your games, tell Gachashift where each tool is, do one test run, connect Telegram or Discord (optional), and choose when to run. Every setting has a one-line hint under it, and each game's page links to its tool's own documentation. When all five steps are done, the checklist goes away.
 
 Other pages:
 
 - **Run**: run everything now, or test one game; the output appears as it happens
 - **Schedule**: the daily Task Scheduler task (highest privileges, never starts late after a missed time)
 - **History**: past runs, with the report at the end
-- **General**: languages, mute / dim / shut down while running, Telegram with a test message
+- **General**: languages, mute / darken the screen / shut down while running, Telegram and Discord with a test message, the update check
 - **Appearance**: a background image, panel opacity, accent colour, and an image for each game. Images are files on your PC; they stay there and are never uploaded or bundled
 
 While a run is going on, a **Stop** button appears on every page.
@@ -137,10 +137,15 @@ gachashift/           The program
   prompt.py           The "about to start" window for scheduled runs
   config.py           config.json, defaults, and migration from the old .env
   system.py           Processes, logs, launcher clicks, Steam, lock screen, mute and brightness
-  report.py           Structured results and the Telegram message
+  report.py           Structured results, the Telegram and Discord messages
+  updates.py          Asks GitHub whether a newer release is out
   i18n.py             All English and Chinese text
   games/              One module per game
-Gachashift App.bat    Opens the app
+Gachashift.py         Entry point of Gachashift.exe (opens the app, or "run" does a run)
+Gachashift App.bat    Opens the app from source
+build.py              Builds dist/Gachashift and its zip with PyInstaller
+assets/               The app icon
+.github/workflows/    Builds and publishes a Release when a version tag is pushed
 config.example.json   Template for config.json
 logs/                 Run logs and archived MaaEnd logs (git-ignored)
 ```
@@ -173,8 +178,11 @@ Problems I hit while building this, and what fixed them:
 
 ## Roadmap
 
-- A packaged `.exe`, so Python isn't needed
 - Genshin Impact via [BetterGI](https://github.com/babalae/better-genshin-impact)
+
+## Releasing
+
+Set the version in `gachashift/__init__.py`, commit and push, then push a matching tag such as `v1.0.1`. GitHub Actions builds `Gachashift.exe` on Windows and publishes the Release with the zip attached; it stops if the tag and the version don't match.
 
 ## Built on
 

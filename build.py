@@ -30,10 +30,16 @@ args = [
     "--exclude-module", "customtkinter",
 ]
 if ICON.exists():
-    args += ["--icon", str(ICON)]
+    # the exe's own icon, plus a copy the app window can use
+    args += ["--icon", str(ICON), "--add-data", f"{ICON};assets"]
 PyInstaller.__main__.run(args)
 
 dist = ROOT / "dist" / "Gachashift"
-shutil.copy(ROOT / "config.example.json", dist / "config.example.json")
+# licences travel with the program
+for name in ("LICENSE", "THIRD_PARTY_NOTICES.txt", "config.example.json"):
+    if (ROOT / name).exists():
+        shutil.copy(ROOT / name, dist / name)
+    else:
+        print(f"warning: {name} not found, not included")
 archive = shutil.make_archive(str(ROOT / "dist" / f"Gachashift-{__version__}"), "zip", dist.parent, "Gachashift")
 print(f"\nBuilt {archive}")

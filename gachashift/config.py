@@ -21,6 +21,7 @@ DEFAULT_CONFIG = {
         "dim_screen": False,     # darken the screen during the scheduled run, restore afterwards
         "dim_level": 30,         # screen brightness (%) while darkened
         "shutdown": True,        # shut the PC down when everything is done
+        "check_updates": True,   # ask GitHub for a newer release when the app opens
     },
     "appearance": {
         "accent": "#F4B860",

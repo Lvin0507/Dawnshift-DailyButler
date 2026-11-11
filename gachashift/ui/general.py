@@ -149,6 +149,12 @@ def build(app):
             inner.addWidget(dim_controls(app, options))
     box.addWidget(card)
 
+    # updates
+    card, inner = panel(spacing=12)
+    inner.addLayout(switch_row(app.tr("general.updates"), bool(options.get("check_updates", True)),
+                               lambda on: app.set_option("check_updates", on)))
+    box.addWidget(card)
+
     # Telegram
     tg = app.cfg["telegram"]
     card, inner = panel(spacing=12)

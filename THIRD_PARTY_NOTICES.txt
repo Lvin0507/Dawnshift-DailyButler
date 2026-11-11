@@ -1,0 +1,35 @@
+Gachashift includes the following third-party software. Each is the property of its
+authors and is used under the license named here. The full license texts are at the links.
+
+PySide6 and Shiboken6 (Qt for Python)
+  License: GNU Lesser General Public License v3.0 (LGPL-3.0)
+  https://www.qt.io/qt-for-python  -  https://www.gnu.org/licenses/lgpl-3.0.html
+  Gachashift uses these libraries unmodified. They are shipped as separate files inside
+  the _internal folder, so they can be replaced with other compatible versions.
+  Source code: https://code.qt.io/cgit/pyside/pyside-setup.git/
+
+Qt (used by PySide6)
+  License: LGPL-3.0  -  https://www.qt.io/licensing/
+
+Python
+  License: Python Software Foundation License  -  https://docs.python.org/3/license.html
+
+requests          Apache License 2.0     https://github.com/psf/requests
+psutil            BSD 3-Clause           https://github.com/giampaolo/psutil
+pycaw             MIT                    https://github.com/AndreMiras/pycaw
+comtypes          MIT                    https://github.com/enthought/comtypes
+screen-brightness-control  MIT           https://github.com/Crozzers/screen_brightness_control
+python-dotenv     BSD 3-Clause           https://github.com/theskumar/python-dotenv
+pywin32           PSF License            https://github.com/mhammond/pywin32
+WMI               MIT                    https://github.com/tjguk/wmi
+urllib3           MIT                    https://github.com/urllib3/urllib3
+idna              BSD 3-Clause           https://github.com/kjd/idna
+certifi           MPL-2.0                https://github.com/certifi/python-certifi
+charset-normalizer  MIT                  https://github.com/jawah/charset_normalizer
+
+Built with PyInstaller (GPL-2.0 with an exception that allows distributing the built program)
+  https://pyinstaller.org/en/stable/license.html
+
+Gachashift does not include any code from the game-automation tools it starts (MaaEnd, MAA,
+ok-wuthering-waves, BAAS, OneDragon). Those are installed separately by the user and are
+covered by their own licenses.

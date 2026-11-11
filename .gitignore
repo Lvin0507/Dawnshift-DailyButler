@@ -1,25 +1,28 @@
-# Secrets and local config
-config.json
+# Secrets and local settings
 .env
+config.json
 
-# Runtime output
+# Run logs and archived tool logs
 logs/
 *.log
+
+# Python cache folders
 __pycache__/
+*.pyc
 
 # Personal exports / screenshots
 *.json
 !config.example.json
 *.png
+!assets/*.png
 *.jpg
 
 # Files a run creates while it is going on
 running.json
 stop.request
+gamma.dim
 
 # Build output
 build/
 dist/
 Gachashift.spec
-
-gamma.dim

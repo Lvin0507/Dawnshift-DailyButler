@@ -7,12 +7,16 @@ import json
 import os
 
 import psutil
-from PySide6.QtCore import Qt, QTimer
+import threading
+
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QHBoxLayout, QMessageBox,
                                QScrollArea, QVBoxLayout, QWidget)
 
+from .. import __version__
 from ..config import app_dir, load_config, save_config
+from ..updates import newer_release
 from ..games import GAMES
 from ..i18n import t
 from ..runner import running_file
@@ -40,8 +44,11 @@ PAGES = ["home", "games", "run", "schedule", "history", "general", "appearance"]
 
 
 class MainWindow(QWidget):
+    update_found = Signal(str, str)  # version, release page; emitted from the checking thread
+
     def __init__(self):
         super().__init__()
+        self.update_info = None  # (version, url) once a newer release is known
         self.cfg = load_config()
         self.saved_cfg = copy.deepcopy(self.cfg)
         self.current_game = GAMES[0].id
@@ -70,6 +77,20 @@ class MainWindow(QWidget):
         self.watch_timer = QTimer(self)  # shows Stop whenever any run is going on
         self.watch_timer.timeout.connect(self.watch_runs)
         self.watch_timer.start(2000)
+        self.update_found.connect(self.on_update_found)
+        if self.cfg["options"].get("check_updates", True):
+            # in the background, so a slow or missing connection never delays the window
+            threading.Thread(target=self.check_updates, daemon=True).start()
+
+    def check_updates(self):
+        found = newer_release()
+        if found:
+            self.update_found.emit(*found)
+
+    def on_update_found(self, version, url):
+        self.update_info = (version, url)
+        if self.page == "home":
+            self.show_page("home")
 
     # ---------- helpers ----------
     @property
@@ -191,6 +212,9 @@ class MainWindow(QWidget):
             col.addWidget(b)
             self.nav[name] = b
         col.addStretch()
+        version = label(f"Gachashift v{__version__}", "hint")
+        version.setContentsMargins(14, 0, 0, 0)
+        col.addWidget(version)
         root.addWidget(side)
 
         right = QVBoxLayout()

@@ -1,5 +1,7 @@
 """Home: the setup checklist (until everything is done) and the list of games."""
 
+import webbrowser
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
 
@@ -60,6 +62,25 @@ def setup_card(app, steps):
     return card
 
 
+def update_card(app):
+    version, url = app.update_info
+    card, inner = panel("setup", spacing=6)
+    row = QHBoxLayout()
+    text = QVBoxLayout()
+    text.addWidget(label(app.tr("update.available", version=version), "h2"))
+    text.addWidget(label(app.tr("update.hint"), "hint", wrap=True))
+    row.addLayout(text, 1)
+
+    def later():
+        app.update_info = None
+        app.show_page("home")
+
+    row.addWidget(button(app.tr("update.later"), None, later))
+    row.addWidget(button(app.tr("update.download"), "primary", lambda: webbrowser.open(url)))
+    inner.addLayout(row)
+    return card
+
+
 def game_row(app, gid):
     game_cfg = app.cfg["games"][gid]
     enabled = bool(game_cfg.get("enabled"))
@@ -112,6 +133,8 @@ def build(app):
     box.setContentsMargins(0, 0, 8, 8)
     box.setSpacing(12)
     box.addWidget(shadowed(label(app.tr("home.heading"), "h1")))
+    if app.update_info:
+        box.addWidget(update_card(app))
 
     steps = app.setup_steps()
     if all(s["done"] for s in steps):

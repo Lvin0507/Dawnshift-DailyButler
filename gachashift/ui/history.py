@@ -1,10 +1,17 @@
 """History: read past runs, newest first. The report is at the end of each run."""
 
+import os
+
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QPlainTextEdit, QVBoxLayout, QWidget
 
 from ..config import app_dir
 from ..system import read_since
-from .widgets import label, panel, shadowed
+from .widgets import button, label, panel, shadowed
+
+
+def open_folder(folder):
+    folder.mkdir(exist_ok=True)
+    os.startfile(str(folder))
 
 
 def build(app):
@@ -19,6 +26,7 @@ def build(app):
     if not runs:
         card, inner = panel()
         inner.addWidget(label(app.tr("history.empty"), "muted", wrap=True))
+        inner.addWidget(button(app.tr("history.open_folder"), None, lambda: open_folder(folder)))
         box.addWidget(card)
         box.addStretch()
         return page
@@ -30,6 +38,8 @@ def build(app):
     picker.addItems(list(dates))
     row.addWidget(picker)
     row.addStretch()
+    # when something goes wrong, "send me today's file" is easier than explaining the path
+    row.addWidget(button(app.tr("history.open_folder"), None, lambda: open_folder(folder)))
     box.addLayout(row)
 
     output = QPlainTextEdit()

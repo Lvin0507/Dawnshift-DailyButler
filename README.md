@@ -1,6 +1,18 @@
-# Gachashift — Daily Butler
+<div align="center">
 
-Clears my game dailies before I wake up. Gachashift is a Windows app that runs five game-automation tools one after another every morning, checks each tool's log to see what actually got done, sends a short report to Telegram and shuts the PC down.
+<img src="assets/gachashift.png" alt="Gachashift" width="160">
+
+# Gachashift
+
+**Clears your game dailies while you sleep.**
+
+[![Release](https://img.shields.io/github/v/release/Lvin0507/Gachashift)](https://github.com/Lvin0507/Gachashift/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![Windows](https://img.shields.io/badge/platform-Windows-0078D6)
+
+[English](README.md) · [中文](README.zh.md) · [Download](https://github.com/Lvin0507/Gachashift/releases/latest)
+
+</div>
 
 ## Download
 

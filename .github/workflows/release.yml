@@ -25,14 +25,22 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt "pyinstaller>=6.16"
 
-      - name: Check the tag matches the version in the code
+      - name: Check tag matches version
         shell: python
         run: |
-          import os, gachashift
+          # Read __version__ as text instead of importing the package:
+          # this script runs from a temp dir, so the repo is not on sys.path.
+          import os, re, pathlib
+          text = pathlib.Path("gachashift/__init__.py").read_text(encoding="utf-8")
+          match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', text)
+          if not match:
+              raise SystemExit("Could not find __version__ in gachashift/__init__.py")
+          version = match.group(1)
           tag = os.environ["GITHUB_REF_NAME"]
-          if tag != "v" + gachashift.__version__:
-              raise SystemExit(f"Tag {tag} doesn't match __version__ {gachashift.__version__}; "
+          if tag != "v" + version:
+              raise SystemExit(f"Tag {tag} doesn't match __version__ {version}; "
                                "update gachashift/__init__.py first.")
+          print(f"Tag {tag} matches __version__ {version}")
 
       - name: Build
         run: python build.py

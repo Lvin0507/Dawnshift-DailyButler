@@ -14,8 +14,6 @@
 
 </div>
 
-Gachashift 是一个 Windows 应用。每天早上，它会依序启动五款游戏的自动化工具，从每个工具自己的日志确认哪些任务真的完成了，把简短的战报发到 Telegram，最后关机。
-
 ## 下载
 
 到 [Releases](https://github.com/Lvin0507/Gachashift/releases/latest) 下载 `Gachashift-x.y.z.zip`，解压到一个你有写入权限的文件夹（不要放在 Program Files），然后打开 `Gachashift.exe`。App 会一步步带你完成设置。

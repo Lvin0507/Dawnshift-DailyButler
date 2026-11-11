@@ -1,0 +1,44 @@
+# Builds Gachashift.exe on GitHub's Windows machines and publishes it as a Release
+# whenever a version tag such as v1.0.1 is pushed.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # needed to create the Release and upload the zip
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          architecture: x64
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller>=6.16"
+
+      - name: Check the tag matches the version in the code
+        shell: python
+        run: |
+          import os, gachashift
+          tag = os.environ["GITHUB_REF_NAME"]
+          if tag != "v" + gachashift.__version__:
+              raise SystemExit(f"Tag {tag} doesn't match __version__ {gachashift.__version__}; "
+                               "update gachashift/__init__.py first.")
+
+      - name: Build
+        run: python build.py
+
+      - name: Publish the Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Gachashift-*.zip
+          generate_release_notes: true

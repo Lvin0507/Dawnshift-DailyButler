@@ -71,3 +71,29 @@ def send_telegram(token, chat_id, reports, lang):
     except requests.exceptions.RequestException as e:
         print(f"Telegram failed: {type(e).__name__}")
         return False
+
+
+def send_discord(webhook_url, reports, lang):
+    """Send the report to a Discord channel through a webhook. Discord caps a message at 2000
+    characters, so a long report goes out in several messages, split between lines."""
+    title = t(lang, "report.title", date=datetime.datetime.now().strftime("%m-%d"))
+    chunks, current = [], ""
+    for line in f"**{title}**\n\n{render_all(reports, lang)}".splitlines():
+        line = line[:1900]
+        if current and len(current) + len(line) + 1 > 1900:
+            chunks.append(current)
+            current = line
+        else:
+            current = f"{current}\n{line}" if current else line
+    if current.strip():
+        chunks.append(current)
+    try:
+        for chunk in chunks:
+            r = requests.post(webhook_url, json={"content": chunk[:2000]}, timeout=15)
+            if not r.ok:
+                print(f"Discord failed: HTTP {r.status_code}")
+                return False
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"Discord failed: {type(e).__name__}")
+        return False

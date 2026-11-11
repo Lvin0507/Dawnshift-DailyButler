@@ -123,6 +123,9 @@ def run_all(cfg=None, only=None, allow_shutdown=True, send=True, ask_first=False
     tg = cfg["telegram"]
     if send and tg.get("enabled") and tg.get("bot_token") and tg.get("chat_id") and reports:
         R.send_telegram(tg["bot_token"], tg["chat_id"], reports, lang)
+    dc = cfg.get("discord", {})
+    if send and dc.get("enabled") and dc.get("webhook_url") and reports:
+        R.send_discord(dc["webhook_url"], reports, lang)
     if allow_shutdown and opts.get("shutdown", True) and not stopped:
         shutdown()
     return reports

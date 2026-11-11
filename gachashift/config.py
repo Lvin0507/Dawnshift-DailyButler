@@ -16,6 +16,7 @@ DEFAULT_CONFIG = {
     "language": "en",            # app language
     "report_language": "en",     # Telegram / console report language
     "telegram": {"enabled": False, "bot_token": "", "chat_id": ""},
+    "discord": {"enabled": False, "webhook_url": ""},
     "options": {
         "mute": True,            # mute while running, restore afterwards
         "dim_screen": False,     # darken the screen during the scheduled run, restore afterwards

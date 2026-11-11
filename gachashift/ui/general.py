@@ -209,5 +209,53 @@ def build(app):
     row.addWidget(result, 1)
     inner.addLayout(row)
     box.addWidget(card)
+    box.addWidget(discord_card(app))
     box.addStretch()
     return page
+
+
+def discord_card(app):
+    dc = app.cfg.setdefault("discord", {"enabled": False, "webhook_url": ""})
+    card, inner = panel(spacing=12)
+
+    def set_enabled(on):
+        dc["enabled"] = on
+        app.changed()
+
+    head = switch_row(app.tr("general.discord"), bool(dc.get("enabled")), set_enabled)
+    head.itemAt(0).widget().setObjectName("h2")
+    inner.addLayout(head)
+    inner.addWidget(label(app.tr("general.webhook_hint"), "hint", wrap=True))
+
+    row = QHBoxLayout()
+    row.addWidget(label(app.tr("general.webhook"), "muted"))
+    url = QLineEdit(dc.get("webhook_url", ""))
+    url.setEchoMode(QLineEdit.Password)  # the link itself is the password
+    url.textChanged.connect(lambda text: (dc.__setitem__("webhook_url", text.strip()), app.changed()))
+    row.addWidget(url, 1)
+    show = QCheckBox(app.tr("general.show"))
+    show.toggled.connect(lambda on: url.setEchoMode(QLineEdit.Normal if on else QLineEdit.Password))
+    row.addWidget(show)
+    inner.addLayout(row)
+
+    result = label("", "muted", wrap=True)
+
+    def send_test():
+        if not dc.get("webhook_url"):
+            result.setText(app.tr("discord.incomplete"))
+            return
+        try:
+            ok = requests.post(dc["webhook_url"], json={"content": app.tr("telegram.test_text")},
+                               timeout=15).ok
+        except requests.exceptions.RequestException:
+            ok = False
+        result.setText(app.tr("discord.sent" if ok else "discord.failed"))
+        result.setObjectName("ok" if ok else "error")
+        result.style().unpolish(result)
+        result.style().polish(result)
+
+    row = QHBoxLayout()
+    row.addWidget(button(app.tr("general.test_telegram"), None, send_test))
+    row.addWidget(result, 1)
+    inner.addLayout(row)
+    return card

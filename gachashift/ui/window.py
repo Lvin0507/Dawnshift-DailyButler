@@ -149,7 +149,8 @@ class MainWindow(QWidget):
             # one finished run from the Run page is enough, however many games are turned on
             {"key": "step3", "done": bool(setup.get("test_run_done")), "go": lambda: self.show_page("run")},
             {"key": "step4", "done": bool(setup.get("skip_telegram")) or bool(
-                tg.get("enabled") and tg.get("bot_token") and tg.get("chat_id")),
+                tg.get("enabled") and tg.get("bot_token") and tg.get("chat_id")) or bool(
+                self.cfg.get("discord", {}).get("enabled") and self.cfg["discord"].get("webhook_url")),
              "go": lambda: self.show_page("general"), "skip": skip_telegram},
             {"key": "step5", "done": bool(self.schedule), "go": lambda: self.show_page("schedule")},
         ]

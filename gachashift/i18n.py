@@ -36,6 +36,7 @@ STRINGS = {
         "hint.launcher": "check the launcher button position",
         "hint.steam": "check Steam auto-login and the launcher button",
         "hint.baas": "the BAAS launcher may have failed to update",
+        "hint.bgi": "check the BetterGI path",
         "log.skip_day": "{game}: not scheduled today, skipped.",
         "log.skip_off": "{game}: turned off, skipped.",
         "log.wait_reset": "{game}: waiting {minutes} min for the daily reset...",
@@ -68,6 +69,7 @@ STRINGS = {
         "hint.launcher": "检查启动器按钮的位置",
         "hint.steam": "检查 Steam 自动登录和启动器按钮",
         "hint.baas": "BAAS 启动器可能更新失败",
+        "hint.bgi": "检查 BetterGI 的路径",
         "log.skip_day": "{game}：今天不在排程内，跳过。",
         "log.skip_off": "{game}：已关闭，跳过。",
         "log.wait_reset": "{game}：等待每日刷新（约 {minutes} 分钟）...",
@@ -80,6 +82,7 @@ GAME_NAMES = {
     "wuthering": {"en": "🌊 Wuthering Waves", "zh": "🌊 鸣潮"},
     "bluearchive": {"en": "📘 Blue Archive", "zh": "📘 蔚蓝档案"},
     "zzz": {"en": "⚡ Zenless Zone Zero", "zh": "⚡ 绝区零"},
+    "genshin": {"en": "✨ Genshin Impact", "zh": "✨ 原神"},
     "system": {"en": "🖥️ PC", "zh": "🖥️ 电脑"},
 }
 
@@ -129,6 +132,12 @@ LABELS = {
         "丽都周纪 (领奖励)": {"en": "Weekly rewards"},
         "体力刷本": {"en": "Stamina farming"},
         "一条龙": {"en": "One-dragon run", "zh": "一条龙"},
+    },
+    "genshin": {
+        "mail": {"en": "Mail", "zh": "邮件"},
+        "commissions": {"en": "Daily commissions", "zh": "每日委托"},
+        "dispatch": {"en": "Expeditions", "zh": "探索派遣"},
+        "daily_reward": {"en": "Commission reward", "zh": "每日委托奖励"},
     },
 }
 
@@ -264,6 +273,8 @@ UI_STRINGS = {
         "f.od_dir": "OneDragon folder",
         "f.steam_appid": "Steam app ID",
         "f.launcher_exe": "Launcher process name",
+        "f.bgi_path": "BetterGI.exe",
+        "f.onedragon_config": "One-dragon config name",
     },
     "zh": {
         "nav.home": "首页",
@@ -377,6 +388,8 @@ UI_STRINGS = {
         "f.od_dir": "OneDragon 文件夹",
         "f.steam_appid": "Steam app ID",
         "f.launcher_exe": "启动器进程名称",
+        "f.bgi_path": "BetterGI.exe",
+        "f.onedragon_config": "一条龙配置名称",
     },
 }
 
@@ -448,6 +461,8 @@ QT_STRINGS = {
         "h.od_dir": "The folder OneDragon is installed in",
         "h.steam_appid": "ZZZ's Steam app ID. Leave it as 4162040.",
         "h.launcher_exe": "The launcher Steam opens for ZZZ, usually HYP.exe",
+        "h.bgi_path": "BetterGI.exe, inside your BetterGI folder. Its log folder is read from next to it.",
+        "h.onedragon_config": "The one-dragon config to run, named as in BetterGI. In that config, set the finishing action to close both the game and BetterGI.",
     },
     "zh": {
         "nav.appearance": "外观",
@@ -511,6 +526,8 @@ QT_STRINGS = {
         "h.od_dir": "OneDragon 的安装文件夹",
         "h.steam_appid": "绝区零的 Steam app ID，保持 4162040 即可。",
         "h.launcher_exe": "Steam 为绝区零打开的启动器，通常是 HYP.exe",
+        "h.bgi_path": "BetterGI 文件夹里的 BetterGI.exe，日志从旁边的 log 文件夹读取。",
+        "h.onedragon_config": "要运行的一条龙配置，名称和 BetterGI 里的一样。请在该配置里把完成后操作设为同时关闭游戏和 BetterGI。",
     },
 }
 

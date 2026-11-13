@@ -20,7 +20,7 @@
 
 因为 exe 没有数字签名，Windows 可能会显示“Windows 已保护你的电脑”：按 **更多信息 → 仍要运行** 即可。
 
-你也需要先装好你玩的每款游戏对应的自动化工具（MaaEnd、MAA、ok-ww、BAAS 或 OneDragon），并确认它们自己能正常运行。App 里有每个工具的链接。
+你也需要先装好你玩的每款游戏对应的自动化工具（MaaEnd、MAA、ok-ww、BAAS、OneDragon 或 BetterGI），并确认它们自己能正常运行。App 里有每个工具的链接。
 
 ## 支持的游戏
 
@@ -31,6 +31,7 @@
 | 鸣潮（官方或 Steam） | [ok-ww](https://github.com/ok-oldking/ok-wuthering-waves) | 每周乐园，默认每周一 |
 | 蔚蓝档案（日服 PC 客户端） | [BAAS](https://github.com/pur1fying/blue_archive_auto_script) | 咖啡厅、课程表、竞技场、扫荡、制造、领取奖励 |
 | 绝区零（官方或 Steam） | [OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon) | 兑换码、签到、邮件、录像店、咖啡店、领取奖励 |
+| 原神 | [BetterGI](https://github.com/babalae/better-genshin-impact) | 邮件、每日委托、委托奖励、探索派遣 |
 
 每款游戏都可以单独开关，也可以各自设定在星期几运行。全部完成后，Gachashift 会发出战报（默认英文，可改成中文）：
 
@@ -77,6 +78,7 @@ Gachashift 本身不玩游戏。每款游戏它都会打开对应的工具，等
   - **ok-ww**：设好游戏路径，配置好 GardenTask
   - **BAAS**：开启“启动时运行”，**关闭**“启动时启动模拟器”（Gachashift 会自己打开日服启动器并点击スタート），选择“完成后退出 BAAS”
   - **OneDragon**：设好游戏路径和账号实例，在一条龙清单里开启你要的应用
+  - **BetterGI**：设好游戏路径，在一条龙配置里开启你要的任务，完成后操作选“关闭游戏和软件”（不要选关机）
 - Steam 游戏：Steam 必须能自动登录拥有该游戏的账号
 - 电脑整晚必须保持开机并保持登录。关掉屏幕没关系；睡眠和锁定画面不行，因为在锁定画面上，任何工具都看不到也点不到东西
 - 运行期间不要碰电脑。BAAS 和启动器的点击用的是真实鼠标，移动鼠标会让 BAAS 停下来
@@ -108,7 +110,7 @@ App 执行的就是这些命令，所以它们也可以单独使用：
 ```
 python -m gachashift                   # 排程运行（有人在用电脑时会先询问）
 python -m gachashift --no-shutdown     # 立即全部运行，结束后不关机
-python -m gachashift --only zzz        # 只跑一款：endfield、arknights、wuthering、bluearchive 或 zzz
+python -m gachashift --only zzz        # 只跑一款：endfield、arknights、wuthering、bluearchive、zzz 或 genshin
 python -m gachashift --dry-run-endfield logs\go-service_<日期>.log
 ```
 
@@ -124,6 +126,7 @@ python -m gachashift --dry-run-endfield logs\go-service_<日期>.log
 - **蔚蓝档案的 ✅ 代表 BAAS 正常跑完，不代表每个每日任务都完成了。** BAAS 不会把任务记录写进文件，所以 Gachashift 只知道 BAAS 运行过并正常结束。实际完成哪些任务，取决于你在 BAAS 里开启的任务。
 - **OneDragon 每次启动都会自动更新**，遇到需要安装驱动的更新时，会停下来等人点击。每次游戏更新后，手动打开一次 OneDragon，早上的运行就不会卡在那个视窗。
 - **鸣潮目前只跑每周乐园。**
+- **原神的委托取决于 BetterGI 的社区脚本。** 有些委托还没有路线，但委托奖励仍可用历练点领取。请关闭 BetterGI 的自动更新订阅脚本，以免脚本在运行中途被更新替换。
 - **只支持 Windows**，因为这些工具都只支持 Windows。
 
 ## 项目结构
@@ -176,10 +179,6 @@ logs/                 运行日志与存档的 MaaEnd 日志（不纳入 git）
 - **锁定画面让所有工具都变成瞎子。** 测试从睡眠唤醒时，Windows 醒来停在锁定画面，截图在那里会失败，所以 MaaEnd 卡在那里启动不了游戏。设成唤醒不需要密码可以解决，但会牺牲安全性，所以改成让电脑开着、只关屏幕，并让 Gachashift 先检查锁定画面：如果停在锁定画面，战报会直接说明，而不是卡上几个小时。
 - **在你用电脑时启动的运行。** 第一次排程在我用电脑时启动，游戏和工具一个接一个打开，只能一个一个手动关掉。现在排程运行如果发现最近两分钟内有人用过鼠标或键盘，会先询问；运行中的每个等待都会检查停止请求，所以停止会在一秒内生效，而且照样会收拾干净。
 
-## 未来计划
-
-- 原神（通过 [BetterGI](https://github.com/babalae/better-genshin-impact)）
-
 ## 发布新版
 
 在 `gachashift/__init__.py` 改好版本号，commit 并 push，再推送一个对应的 tag，例如 `v1.0.1`。GitHub Actions 会在 Windows 上打包 `Gachashift.exe`，并发布附上 zip 的 Release；如果 tag 和版本号对不上，它会停下来不发布。
@@ -193,6 +192,7 @@ Gachashift 只负责调度这些工具并读取它们的日志，所有实际的
 - [ok-wuthering-waves](https://github.com/ok-oldking/ok-wuthering-waves)：鸣潮
 - [BAAS](https://github.com/pur1fying/blue_archive_auto_script)：蔚蓝档案
 - [ZenlessZoneZero-OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon)：绝区零
+- [BetterGI](https://github.com/babalae/better-genshin-impact)：原神
 
 本仓库不包含也不散布它们的任何代码。每个项目都有自己的授权，使用前请自行确认。
 

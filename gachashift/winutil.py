@@ -18,9 +18,9 @@ from .i18n import game_name
 
 SHORT_NAMES = {
     "en": {"endfield": "Endfield", "arknights": "Arknights", "wuthering": "Wuthering Waves",
-           "bluearchive": "Blue Archive", "zzz": "ZZZ"},
+           "bluearchive": "Blue Archive", "zzz": "ZZZ", "genshin": "Genshin"},
     "zh": {"endfield": "终末地", "arknights": "明日方舟", "wuthering": "鸣潮",
-           "bluearchive": "蔚蓝档案", "zzz": "绝区零"},
+           "bluearchive": "蔚蓝档案", "zzz": "绝区零", "genshin": "原神"},
 }
 # ZZZ settings that only matter for the Steam client
 STEAM_ONLY = {"steam_appid", "launcher_exe", "start_button"}
@@ -34,6 +34,7 @@ TOOLS = {
     "wuthering": ("ok-ww", "https://github.com/ok-oldking/ok-wuthering-waves"),
     "bluearchive": ("BAAS", "https://github.com/pur1fying/blue_archive_auto_script"),
     "zzz": ("OneDragon", "https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon"),
+    "genshin": ("BetterGI", "https://github.com/babalae/better-genshin-impact"),
 }
 
 # Per-game form: (config key, kind, extra). Kinds: exe, file, dir, text, bool, choice, point
@@ -48,6 +49,8 @@ FIELDS = {
     "zzz": [("client", "choice", ["official", "steam"]), ("server", "choice", ["asia", "america", "europe"]),
             ("od_dir", "dir", None), ("steam_appid", "text", None), ("launcher_exe", "text", None),
             ("start_button", "point", None), ("wait_for_reset", "bool", None)],
+    "genshin": [("server", "choice", ["asia", "america", "europe"]), ("bgi_path", "exe", None),
+                ("onedragon_config", "text", None), ("wait_for_reset", "bool", None)],
 }
 PATH_KINDS = ("exe", "file", "dir")
 

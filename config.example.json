@@ -108,6 +108,22 @@
         0.85,
         0.86
       ]
+    },
+    "genshin": {
+      "enabled": false,
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "wait_for_reset": true,
+      "server": "asia",
+      "bgi_path": "",
+      "onedragon_config": "默认配置"
     }
   }
 }

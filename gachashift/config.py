@@ -46,6 +46,9 @@ DEFAULT_CONFIG = {
                 "client": "official",      # official / steam
                 "od_dir": "", "steam_appid": "4162040",
                 "launcher_exe": "HYP.exe", "start_button": [0.85, 0.86]},
+        "genshin": {"enabled": False, "days": ALL_DAYS, "wait_for_reset": True,
+                    "server": "asia",          # asia / america / europe
+                    "bgi_path": "", "onedragon_config": "默认配置"},
     },
 }
 

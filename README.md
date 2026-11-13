@@ -20,7 +20,7 @@ Get `Gachashift-x.y.z.zip` from [Releases](../../releases), unzip it to a folder
 
 Windows may say it "protected your PC", because the exe isn't code-signed: choose **More info → Run anyway**.
 
-You also need the automation tool for each game you play (MaaEnd, MAA, ok-ww, BAAS or OneDragon), set up and working on its own first. The app links to each one.
+You also need the automation tool for each game you play (MaaEnd, MAA, ok-ww, BAAS, OneDragon or BetterGI), set up and working on its own first. The app links to each one.
 
 ## What it does
 
@@ -31,6 +31,7 @@ You also need the automation tool for each game you play (MaaEnd, MAA, ok-ww, BA
 | Wuthering Waves (official or Steam) | [ok-ww](https://github.com/ok-oldking/ok-wuthering-waves) | Weekly garden task, Mondays by default |
 | Blue Archive (JP PC client) | [BAAS](https://github.com/pur1fying/blue_archive_auto_script) | Cafe, lessons, arena, sweeps, crafting, rewards |
 | Zenless Zone Zero (official or Steam) | [OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon) | Redeem codes, check-in, mail, video store, coffee, rewards |
+| Genshin Impact | [BetterGI](https://github.com/babalae/better-genshin-impact) | Mail, daily commissions, commission reward, expeditions |
 
 Each game can be turned on or off and given its own weekdays. When everything is done, Gachashift sends a report (English by default, Chinese optional):
 
@@ -77,6 +78,7 @@ If you are using the PC when the scheduled time comes, it asks first and gives y
   - **ok-ww**: game path set; GardenTask configured
   - **BAAS**: "run on startup" enabled, "start emulator on startup" **disabled** (Gachashift opens the JP launcher and clicks スタート itself), "exit BAAS when done" selected
   - **OneDragon**: game path and account instance set; the apps you want enabled in the one-dragon list
+  - **BetterGI**: set the game path, enable the tasks you want in a one-dragon config, and set its finishing action to close the game and BetterGI (not shut down)
 - For Steam games: Steam must sign in automatically to the account that owns the game
 - The PC must stay on and signed in overnight. Turning the screen off is fine; sleep and the lock screen are not, because no tool can see or click anything on the lock screen
 - Leave the PC alone during a run. BAAS and the launcher clicks use the real mouse, and moving it makes BAAS stop
@@ -108,7 +110,7 @@ The app runs the same commands, so they also work on their own:
 ```
 python -m gachashift                   # the scheduled run (asks first if someone is at the PC)
 python -m gachashift --no-shutdown     # run everything now and keep the PC on
-python -m gachashift --only zzz        # one game: endfield, arknights, wuthering, bluearchive or zzz
+python -m gachashift --only zzz        # one game: endfield, arknights, wuthering, bluearchive, zzz or genshin
 python -m gachashift --dry-run-endfield logs\go-service_<date>.log
 ```
 
@@ -124,6 +126,7 @@ Add `--lang zh` for a Chinese report.
 - **Blue Archive's ✅ means BAAS finished, not that every daily mission is done.** BAAS doesn't write its task log to a file, so Gachashift only knows that BAAS ran and exited normally. Which missions get done depends on the tasks enabled in BAAS.
 - **OneDragon updates itself on every start**, and an update that needs a driver installed waits for a click. Open OneDragon by hand once after each game update, so the morning run doesn't stop at that window.
 - **Wuthering Waves only runs the weekly garden task** for now.
+- **Genshin's commissions depend on BetterGI's community scripts.** Some commissions have no route yet; the commission reward can still be claimed with Adventurer Rank points. Turn off BetterGI's automatic script updates, so an update can't replace a script while it runs.
 - **Windows only**, because every tool is Windows-only.
 
 ## Project layout
@@ -176,10 +179,6 @@ Problems I hit while building this, and what fixed them:
 - **The lock screen blinds every tool.** Testing wake-from-sleep, Windows woke up on the lock screen, where screen capture fails, so MaaEnd sat there unable to start the game. Waking without a password would have fixed it at the cost of security, so the PC stays on with the screen off instead, and Gachashift checks for the lock screen first: if it is up, the report says so rather than hanging for hours.
 - **A run that starts while you're at the PC.** The first time the schedule fired while I was using the computer, games and tools kept opening and had to be closed one by one. Scheduled runs now ask first if the mouse or keyboard was used in the last two minutes, and every wait in a run checks for a stop request, so a stop takes effect within a second and still cleans up after itself.
 
-## Roadmap
-
-- Genshin Impact via [BetterGI](https://github.com/babalae/better-genshin-impact)
-
 ## Releasing
 
 Set the version in `gachashift/__init__.py`, commit and push, then push a matching tag such as `v1.0.1`. GitHub Actions builds `Gachashift.exe` on Windows and publishes the Release with the zip attached; it stops if the tag and the version don't match.
@@ -193,6 +192,7 @@ Gachashift only orchestrates these tools and reads their logs — all the actual
 - [ok-wuthering-waves](https://github.com/ok-oldking/ok-wuthering-waves) — Wuthering Waves
 - [BAAS](https://github.com/pur1fying/blue_archive_auto_script) — Blue Archive
 - [ZenlessZoneZero-OneDragon](https://github.com/OneDragon-Anything/ZenlessZoneZero-OneDragon) — Zenless Zone Zero
+- [BetterGI](https://github.com/babalae/better-genshin-impact) — Genshin Impact
 
 This repo doesn't include or redistribute any of their code. Each project has its own license; please check them before use.
 

@@ -65,7 +65,13 @@
       "steam_client": false,
       "okww_path": "",
       "log_path": "",
-      "task": "GardenTask"
+      "task": "GardenTask",
+      "steam_appid": "3513350",
+      "launcher_exe": "launcher_main.exe",
+      "start_button": [
+        0.85,
+        0.86
+      ]
     },
     "bluearchive": {
       "enabled": false,

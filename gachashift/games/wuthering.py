@@ -1,8 +1,9 @@
 """Wuthering Waves via ok-ww (-t GardenTask -e).
 
 ok-ww exits by itself after a successful run but stays open after a task exception, so we also
-watch its log for the end of the task and always close it ourselves. The Steam build needs
-Steam running with admin rights first, or the game closes itself shortly after starting."""
+watch its log for the end of the task and always close it ourselves. The Steam build opens
+Kuro's launcher (launcher_main.exe), which needs a click on its start button, so we open the
+game through Steam with admin rights, click the button, and hand the running game to ok-ww."""
 
 import os
 import re
@@ -10,8 +11,8 @@ import subprocess
 import time
 
 from .. import report as R
-from ..system import (StopRequested, kill, kill_processes, log_size, pause, processes_in,
-                      read_since, start_steam_elevated, ts)
+from ..system import (StopRequested, kill, kill_processes, launch_and_click, log_size, pause,
+                      processes_in, read_since, restart_steam_if_running, ts)
 from .base import Game
 
 GAME_EXE = "Client-Win64-Shipping.exe"
@@ -48,14 +49,24 @@ class WutheringWaves(Game):
     id = "wuthering"
     required = ("okww_path", "log_path")
 
+    def _open_through_steam(self):
+        restart_steam_if_running()  # so the game inherits our admin rights
+        return launch_and_click(
+            lambda: os.startfile(f"steam://rungameid/{self.cfg.get('steam_appid') or '3513350'}"),
+            self.cfg.get("launcher_exe") or "launcher_main.exe", self.cfg["start_button"],
+            GAME_EXE, wait_after=60)
+
     def run(self, timeout=5400):
         path, log = self.cfg["okww_path"], self.cfg["log_path"]
         folder = os.path.dirname(path)
         offset = log_size(log)
         start, stop = time.time(), None
         try:
-            if self.cfg.get("steam_client"):
-                start_steam_elevated()
+            if self.cfg.get("steam_client") and not self._open_through_steam():
+                rep = self.new_report()
+                rep.add("garden", R.FAIL)
+                rep.note("note.not_started", hint="hint.steam")
+                return rep
             print(f"[{ts()}] starting {path}")
             subprocess.Popen([path, "-t", self.cfg.get("task") or "GardenTask", "-e"], cwd=folder)
             pause(15)
@@ -73,7 +84,7 @@ class WutheringWaves(Game):
         finally:
             # ok-ww stays open after a failure; never leave it running for the next game
             kill_processes(processes_in(folder))
-            kill([GAME_EXE])
+            kill([GAME_EXE, self.cfg.get("launcher_exe") if self.cfg.get("steam_client") else None])
             time.sleep(5)
         text = read_since(log, offset)
         rep = parse_ww_log(text, self.new_report())

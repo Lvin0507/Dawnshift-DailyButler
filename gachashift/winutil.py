@@ -22,7 +22,7 @@ SHORT_NAMES = {
     "zh": {"endfield": "终末地", "arknights": "明日方舟", "wuthering": "鸣潮",
            "bluearchive": "蔚蓝档案", "zzz": "绝区零", "genshin": "原神"},
 }
-# ZZZ settings that only matter for the Steam client
+# Settings that only matter for the Steam client (ZZZ and Wuthering Waves)
 STEAM_ONLY = {"steam_appid", "launcher_exe", "start_button"}
 
 DAY_KEYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -42,7 +42,9 @@ FIELDS = {
     "endfield": [("maaend_path", "exe", None), ("log_dir", "dir", None)],
     "arknights": [("maa_path", "exe", None), ("maa_log", "file", None), ("game_exe", "text", None)],
     "wuthering": [("okww_path", "exe", None), ("log_path", "file", None),
-                  ("steam_client", "bool", None), ("task", "text", None)],
+                  ("steam_client", "bool", None), ("steam_appid", "text", None),
+                  ("launcher_exe", "text", None), ("start_button", "point", None),
+                  ("task", "text", None)],
     "bluearchive": [("launcher_path", "exe", None), ("baas_dir", "dir", None),
                     ("baas_exe", "exe", None), ("start_button", "point", None),
                     ("wait_for_reset", "bool", None)],

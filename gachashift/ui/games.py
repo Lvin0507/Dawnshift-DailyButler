@@ -53,7 +53,8 @@ def build(app):
 
     card, inner = panel(spacing=18)
     for key, kind, extra in FIELDS[gid]:
-        if gid == "zzz" and game_cfg.get("client") != "steam" and key in STEAM_ONLY:
+        steam = game_cfg.get("client") == "steam" if gid == "zzz" else game_cfg.get("steam_client")
+        if gid in ("zzz", "wuthering") and not steam and key in STEAM_ONLY:
             continue
         inner.addWidget(make_field(app, gid, key, kind, extra))
     box.addWidget(card)
@@ -72,7 +73,12 @@ def make_field(app, gid, key, kind, extra):
         col.setSpacing(4)
         check = QCheckBox(title)
         check.setChecked(bool(game_cfg.get(key)))
-        check.toggled.connect(lambda on: app.set_game_value(gid, key, on))
+        def toggled(on):
+            app.set_game_value(gid, key, on)
+            if key == "steam_client":
+                app.show_page("games")  # Steam-only settings appear or disappear
+
+        check.toggled.connect(toggled)
         col.addWidget(check)
         col.addWidget(label(hint, "hint", wrap=True))
         return holder

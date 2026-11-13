@@ -24,6 +24,7 @@ GAME_EXES = ["GenshinImpact.exe", "YuanShen.exe"]  # global / China client
 # The log file quotes values ("全部领取"); BetterGI's console output doesn't. Accept both.
 MAIL = re.compile(r"邮件：[\"“]?([^\"”\r\n]+)")
 PROGRESS = re.compile(r"当前每日委托奖励进度: (\d+)/(\d+)")
+SUCCESS = re.compile(r"委托执行成功：")
 DISPATCH_CLAIMED = re.compile(r"探索派遣：[\"“]?全部领取")
 DISPATCH_NOTHING = re.compile(r"探索派遣[\"”]? 未探索完成或已领取")
 DAILY = re.compile(r"检查每日奖励结果：[\"“]?([^\"”\r\n]+)")
@@ -49,7 +50,10 @@ def parse_bgi_log(text, rep, minutes, reason, stopped=False):
 
     progress = PROGRESS.findall(text)
     if progress:
-        done, total = progress[-1]
+        # The progress line is only logged when the commission page is read, usually before
+        # the commissions run, so add the ones that finished after it.
+        first, total = int(progress[0][0]), int(progress[0][1])
+        done = max(int(progress[-1][0]), min(total, first + len(SUCCESS.findall(text))))
         rep.add("commissions", R.OK if done == total else R.PARTIAL, f"{done}/{total}")
 
     if DISPATCH_CLAIMED.search(text):
